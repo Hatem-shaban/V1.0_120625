@@ -14,6 +14,9 @@
             publicKey: "7gqJJx6DqBcygdMlE",
             limitRate: true
         });
+
+        // Initialize Stripe globally
+        const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
     </script>
 
 </head>
@@ -160,39 +163,44 @@
         }
         
         async function startCheckout() {
-         const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
-    
             try {
-            const response = await fetch('/.netlify/functions/create-checkout-session', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                priceId: 'price_1RSdrmE92IbV5FBUV1zE2VhD', // Not product ID
-                customerEmail: localStorage.getItem('userEmail') || ''
-            }),
-             });
-        
-            const session = await response.json();
-        
-            if (session.error) {
-            alert('Error: ' + session.error);
-            return;
-         }
-        
-            const result = await stripe.redirectToCheckout({
-            sessionId: session.id,
-            });
-        
-            if (result.error) {
-            alert(result.error.message);
-            }
+                // Capture email before checkout if not already stored
+                if (!localStorage.getItem('userEmail')) {
+                    await captureEmail();
+                }
+
+                const response = await fetch('/.netlify/functions/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        priceId: 'price_1RSdrmE92IbV5FBUV1zE2VhD',
+                        customerEmail: localStorage.getItem('userEmail') || ''
+                    }),
+                });
+
+                const session = await response.json();
+
+                if (session.error) {
+                    console.error('Session error:', session.error);
+                    alert('Error: ' + session.error);
+                    return;
+                }
+
+                const result = await stripe.redirectToCheckout({
+                    sessionId: session.id,
+                });
+
+                if (result.error) {
+                    console.error('Stripe error:', result.error);
+                    alert(result.error.message);
+                }
             } catch (error) {
-             console.error('Checkout error:', error);
-            alert('Something went wrong. Please try again.');
+                console.error('Checkout error:', error);
+                alert('Something went wrong. Please try again.');
             }
-            }
+        }
         
         function sendWelcomeEmail(userEmail, userName) {
              const templateParams = {
