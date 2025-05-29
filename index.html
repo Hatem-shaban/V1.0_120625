@@ -6,6 +6,13 @@
     <title>StartupStack - AI-Powered SaaS Bundle for Entrepreneurs</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script>
+    (function(){
+        emailjs.init("7gqJJx6DqBcygdMlE");
+    })();
+</script>
+
 </head>
 <body class="bg-gray-900 text-white">
     <!-- Hero Section -->
@@ -149,10 +156,113 @@
             document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
         }
         
-        function startCheckout() {
-            // Replace with your Stripe checkout URL
-            window.location.href = 'https://buy.stripe.com/test_YOUR_PAYMENT_LINK';
+        async function startCheckout() {
+         const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
+    
+            try {
+            const response = await fetch('/.netlify/functions/create-checkout-session', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                priceId: 'price_1RSdrmE92IbV5FBUV1zE2VhD', // Not product ID
+                customerEmail: localStorage.getItem('userEmail') || ''
+            }),
+             });
+        
+            const session = await response.json();
+        
+            if (session.error) {
+            alert('Error: ' + session.error);
+            return;
+         }
+        
+            const result = await stripe.redirectToCheckout({
+            sessionId: session.id,
+            });
+        
+            if (result.error) {
+            alert(result.error.message);
+            }
+            } catch (error) {
+             console.error('Checkout error:', error);
+            alert('Something went wrong. Please try again.');
+            }
+            }
+        
+        function sendWelcomeEmail(userEmail, userName) {
+             const templateParams = {
+            to_email: userEmail,
+            to_name: userName,
+            message: `Welcome to StartupStack! Your AI-powered toolkit is ready. 
+                 Login here: https://yourdomain.com/dashboard
+                 Need help? Reply to this email.`
+            };
+
+            emailjs.send('service_853d4hu', 'startup_welcome', templateParams)
+             .then(function(response) {
+            console.log('Welcome email sent!', response.status, response.text);
+            }, function(error) {
+            console.log('Email failed...', error);
+            });
         }
-    </script>
+            // User signup with email capture
+        async function captureEmail() {
+             const email = prompt('Enter your email to start your free trial:');
+             if (!email || !email.includes('@')) {
+            alert('Please enter a valid email address');
+            return;
+             }
+        
+             localStorage.setItem('userEmail', email);
+                sendWelcomeEmail(email);
+        
+            // Store in Supabase (if you set it up)
+            if (window.supabase) {
+                await window.supabase
+                .from('users')
+                .insert([{ email: email }]);
+            }
+        
+            // Proceed to checkout
+            startCheckout();
+        }
+        function showNotification(message) {
+        const notification = document.createElement('div');
+        notification.innerHTML = `
+            <div style="position: fixed; top: 20px; right: 20px; background: #10B981; color: white; 
+                        padding: 12px 20px; border-radius: 8px; z-index: 1000; font-weight: 500;">
+                ${message}
+            </div>
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 5000);
+    }
+
+    // URL parameter handling (for referrals, success pages, etc.)
+    function getUrlParameter(name) {
+        name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+        const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+        const results = regex.exec(location.search);
+        return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    }
+
+    // Handle success page
+    if (window.location.pathname.includes('success')) {
+        showNotification('Payment successful! Welcome to StartupStack!');
+        const email = localStorage.getItem('userEmail');
+        if (email) {
+            sendWelcomeEmail(email);
+        }
+    }
+
+    // Handle referral codes
+    const referralCode = getUrlParameter('ref');
+    if (referralCode) {
+        localStorage.setItem('referralCode', referralCode);
+        showNotification('Referral code applied! You and your referrer will both get benefits.');
+    }
+        </script>
 </body>
 </html>
