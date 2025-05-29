@@ -8,15 +8,13 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3.11.0/dist/email.min.js"></script>
-    <script src="https://js.stripe.com/v3/"></script>
+    <!-- Replace Stripe with PayPal SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=ASeHWiYLDAYkTH1JNEkRpBBRWN1yqFjG2dAMMvku9eDqm4TUN1Q4MuD6B24ymBH6NcOoBqNoMycAReEL&currency=USD"></script>
     <script>
         emailjs.init({
             publicKey: "7gqJJx6DqBcygdMlE",
             limitRate: true
         });
-
-        // Initialize Stripe globally
-        const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
     </script>
 
 </head>
@@ -129,7 +127,9 @@
                         <li><i class="fas fa-check text-yellow-400 mr-2"></i>Advanced Features</li>
                         <li><i class="fas fa-check text-yellow-400 mr-2"></i>API Access</li>
                     </ul>
-                    <button onclick="startCheckout()" class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-gray-100">Start Free Trial</button>
+                    <button onclick="startCheckout()" class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-gray-100">
+    Subscribe with PayPal
+</button>
                 </div>
                 
                 <!-- Lifetime -->
@@ -164,38 +164,47 @@
         
         async function startCheckout() {
             try {
-                // Capture email before checkout if not already stored
+                // Capture email if not stored
                 if (!localStorage.getItem('userEmail')) {
                     await captureEmail();
                 }
 
-                const response = await fetch('/.netlify/functions/create-checkout-session', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
+                // Create PayPal buttons container
+                const paypalContainer = document.createElement('div');
+                paypalContainer.id = 'paypal-button-container';
+                document.body.appendChild(paypalContainer);
+
+                // Render PayPal buttons
+                paypal.Buttons({
+                    createOrder: function(data, actions) {
+                        return actions.order.create({
+                            purchase_units: [{
+                                amount: {
+                                    value: '79.00',  // Monthly subscription price
+                                    currency_code: 'USD'
+                                },
+                                description: 'StartupStack Pro Bundle - Monthly Subscription'
+                            }]
+                        });
                     },
-                    body: JSON.stringify({
-                        priceId: 'price_1RSdrmE92IbV5FBUV1zE2VhD',
-                        customerEmail: localStorage.getItem('userEmail') || ''
-                    }),
-                });
+                    onApprove: function(data, actions) {
+                        return actions.order.capture().then(function(details) {
+                            // Handle successful payment
+                            const email = localStorage.getItem('userEmail');
+                            sendWelcomeEmail(email);
+                            showNotification('Payment successful! Welcome to StartupStack!');
+                            
+                            // Redirect to success page
+                            window.location.href = '/success';
+                        });
+                    },
+                    onError: function(err) {
+                        console.error('PayPal error:', err);
+                        alert('Payment failed. Please try again.');
+                        paypalContainer.remove();
+                    }
+                }).render('#paypal-button-container');
 
-                const session = await response.json();
-
-                if (session.error) {
-                    console.error('Session error:', session.error);
-                    alert('Error: ' + session.error);
-                    return;
-                }
-
-                const result = await stripe.redirectToCheckout({
-                    sessionId: session.id,
-                });
-
-                if (result.error) {
-                    console.error('Stripe error:', result.error);
-                    alert(result.error.message);
-                }
             } catch (error) {
                 console.error('Checkout error:', error);
                 alert('Something went wrong. Please try again.');
