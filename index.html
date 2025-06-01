@@ -127,7 +127,7 @@
                         <li><i class="fas fa-check text-yellow-400 mr-2"></i>Advanced Features</li>
                         <li><i class="fas fa-check text-yellow-400 mr-2"></i>API Access</li>
                     </ul>
-                    <button onclick="startCheckout()" class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition duration-200">
+                    <button onclick="startCheckout(event)" class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition duration-200">
     <i class="fas fa-credit-card mr-2"></i>Subscribe Now
 </button>
                 </div>
@@ -153,7 +153,9 @@
         <div class="max-w-4xl mx-auto px-6 text-center">
             <h2 class="text-4xl font-bold mb-6">Ready to Launch Your Startup?</h2>
             <p class="text-xl mb-8">Join 500+ entrepreneurs who've already started their journey with StartupStack</p>
-            <button onclick="startCheckout()" class="bg-white text-purple-600 px-8 py-4 rounded-lg text-xl font-semibold hover:bg-gray-100">Start Your Free Trial Today</button>
+            <button onclick="startCheckout(event)" class="bg-white text-purple-600 px-8 py-4 rounded-lg text-xl font-semibold hover:bg-gray-100">
+    Start Your Free Trial Today
+</button>
         </div>
     </section>
 
@@ -164,11 +166,15 @@
         
         const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
 
-        async function startCheckout() {
+        async function startCheckout(event) {
+            // Prevent default button behavior
+            event.preventDefault();
+            
             try {
                 // Show loading state
-                const button = event.target;
+                const button = event.currentTarget;
                 button.disabled = true;
+                const originalText = button.innerHTML;
                 button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
                 // Validate email
@@ -185,14 +191,16 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({
                         customerEmail: email
-                    }),
+                    })
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorData = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorData}`);
                 }
 
                 const data = await response.json();
@@ -214,9 +222,11 @@
                 console.error('Checkout error:', error);
                 showNotification(error.message || 'Something went wrong', 'error');
             } finally {
-                // Reset button state
-                button.disabled = false;
-                button.innerHTML = '<i class="fas fa-credit-card mr-2"></i>Subscribe Now';
+                if (event && event.currentTarget) {
+                    const button = event.currentTarget;
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-credit-card mr-2"></i>Subscribe Now';
+                }
             }
         }
 
