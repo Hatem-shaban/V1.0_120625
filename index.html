@@ -162,46 +162,61 @@
             document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
         }
         
+        const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
+
         async function startCheckout() {
             try {
-                // Capture email
+                // Show loading state
+                const button = event.target;
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+                // Validate email
                 const email = prompt('Enter your email to continue:');
                 if (!email || !email.includes('@')) {
-                    alert('Please enter a valid email address');
-                    return;
+                    throw new Error('Please enter a valid email address');
                 }
 
                 // Store email
                 localStorage.setItem('userEmail', email);
 
-                // Call your backend to create a checkout session
+                // Create checkout session
                 const response = await fetch('/.netlify/functions/create-checkout-session', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        priceId: 'price_1RSdrmE92IbV5FBUV1zE2VhD', // Your Stripe price ID
                         customerEmail: email
                     }),
                 });
 
-                const { id } = await response.json();
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
                 
-                // Initialize Stripe
-                const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
-                
-                // Redirect to checkout
-                const result = await stripe.redirectToCheckout({
-                    sessionId: id
+                if (!data.id) {
+                    throw new Error('Invalid response from server');
+                }
+
+                // Redirect to Stripe Checkout
+                const { error } = await stripe.redirectToCheckout({
+                    sessionId: data.id
                 });
 
-                if (result.error) {
-                    alert(result.error.message);
+                if (error) {
+                    throw error;
                 }
+
             } catch (error) {
-                console.error('Error:', error);
-                alert('Something went wrong. Please try again.');
+                console.error('Checkout error:', error);
+                showNotification(error.message || 'Something went wrong', 'error');
+            } finally {
+                // Reset button state
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-credit-card mr-2"></i>Subscribe Now';
             }
         }
 
