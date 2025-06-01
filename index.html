@@ -8,8 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3.11.0/dist/email.min.js"></script>
-    <!-- Replace Stripe with PayPal SDK -->
-    <script src="https://www.paypal.com/sdk/js?client-id=ASeHWiYLDAYkTH1JNEkRpBBRWN1yqFjG2dAMMvku9eDqm4TUN1Q4MuD6B24ymBH6NcOoBqNoMycAReEL&currency=USD"></script>
+    <!-- Replace PayPal with Stripe -->
+    <script src="https://js.stripe.com/v3/"></script>
     <script>
         emailjs.init({
             publicKey: "7gqJJx6DqBcygdMlE",
@@ -127,8 +127,8 @@
                         <li><i class="fas fa-check text-yellow-400 mr-2"></i>Advanced Features</li>
                         <li><i class="fas fa-check text-yellow-400 mr-2"></i>API Access</li>
                     </ul>
-                    <button onclick="startCheckout()" class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-gray-100">
-    Subscribe with PayPal
+                    <button onclick="startCheckout()" class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition duration-200">
+    <i class="fas fa-credit-card mr-2"></i>Subscribe Now
 </button>
                 </div>
                 
@@ -164,125 +164,58 @@
         
         async function startCheckout() {
             try {
-                // Capture email if not stored
-                if (!localStorage.getItem('userEmail')) {
-                    await captureEmail();
+                // Capture email
+                const email = prompt('Enter your email to continue:');
+                if (!email || !email.includes('@')) {
+                    alert('Please enter a valid email address');
+                    return;
                 }
 
-                // Create PayPal buttons container
-                const paypalContainer = document.createElement('div');
-                paypalContainer.id = 'paypal-button-container';
-                document.body.appendChild(paypalContainer);
+                // Store email
+                localStorage.setItem('userEmail', email);
 
-                // Render PayPal buttons
-                paypal.Buttons({
-                    createOrder: function(data, actions) {
-                        return actions.order.create({
-                            purchase_units: [{
-                                amount: {
-                                    value: '79.00',  // Monthly subscription price
-                                    currency_code: 'USD'
-                                },
-                                description: 'StartupStack Pro Bundle - Monthly Subscription'
-                            }]
-                        });
+                // Call your backend to create a checkout session
+                const response = await fetch('/.netlify/functions/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
                     },
-                    onApprove: function(data, actions) {
-                        return actions.order.capture().then(function(details) {
-                            // Handle successful payment
-                            const email = localStorage.getItem('userEmail');
-                            sendWelcomeEmail(email);
-                            showNotification('Payment successful! Welcome to StartupStack!');
-                            
-                            // Redirect to success page
-                            window.location.href = '/success';
-                        });
-                    },
-                    onError: function(err) {
-                        console.error('PayPal error:', err);
-                        alert('Payment failed. Please try again.');
-                        paypalContainer.remove();
-                    }
-                }).render('#paypal-button-container');
+                    body: JSON.stringify({
+                        priceId: 'price_1RSdrmE92IbV5FBUV1zE2VhD', // Your Stripe price ID
+                        customerEmail: email
+                    }),
+                });
 
+                const { id } = await response.json();
+                
+                // Initialize Stripe
+                const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
+                
+                // Redirect to checkout
+                const result = await stripe.redirectToCheckout({
+                    sessionId: id
+                });
+
+                if (result.error) {
+                    alert(result.error.message);
+                }
             } catch (error) {
-                console.error('Checkout error:', error);
+                console.error('Error:', error);
                 alert('Something went wrong. Please try again.');
             }
         }
-        
-        function sendWelcomeEmail(userEmail, userName) {
-             const templateParams = {
-            to_email: userEmail,
-            to_name: userName,
-            message: `Welcome to StartupStack! Your AI-powered toolkit is ready. 
-                 Login here: https://yourdomain.com/dashboard
-                 Need help? Reply to this email.`
-            };
 
-            emailjs.send('service_853d4hu', 'startup_welcome', templateParams)
-             .then(function(response) {
-            console.log('Welcome email sent!', response.status, response.text);
-            }, function(error) {
-            console.log('Email failed...', error);
-            });
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.innerHTML = `
+                <div style="position: fixed; top: 20px; right: 20px; 
+                            background: ${type === 'success' ? '#10B981' : '#EF4444'}; 
+                            color: white; padding: 12px 20px; border-radius: 8px; 
+                            z-index: 1001;">${message}</div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 5000);
         }
-            // User signup with email capture
-        async function captureEmail() {
-             const email = prompt('Enter your email to start your free trial:');
-             if (!email || !email.includes('@')) {
-            alert('Please enter a valid email address');
-            return;
-             }
-        
-             localStorage.setItem('userEmail', email);
-                sendWelcomeEmail(email);
-        
-            // Store in Supabase (if you set it up)
-            if (window.supabase) {
-                await window.supabase
-                .from('users')
-                .insert([{ email: email }]);
-            }
-        
-            // Proceed to checkout
-            startCheckout();
-        }
-        function showNotification(message) {
-        const notification = document.createElement('div');
-        notification.innerHTML = `
-            <div style="position: fixed; top: 20px; right: 20px; background: #10B981; color: white; 
-                        padding: 12px 20px; border-radius: 8px; z-index: 1000; font-weight: 500;">
-                ${message}
-            </div>
-        `;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 5000);
-    }
-
-    // URL parameter handling (for referrals, success pages, etc.)
-    function getUrlParameter(name) {
-        name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-        const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-        const results = regex.exec(location.search);
-        return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-    }
-
-    // Handle success page
-    if (window.location.pathname.includes('success')) {
-        showNotification('Payment successful! Welcome to StartupStack!');
-        const email = localStorage.getItem('userEmail');
-        if (email) {
-            sendWelcomeEmail(email);
-        }
-    }
-
-    // Handle referral codes
-    const referralCode = getUrlParameter('ref');
-    if (referralCode) {
-        localStorage.setItem('referralCode', referralCode);
-        showNotification('Referral code applied! You and your referrer will both get benefits.');
-    }
-        </script>
+    </script>
 </body>
 </html>
