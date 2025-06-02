@@ -49,7 +49,6 @@
                 button.disabled = true;
                 button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-                // Check if StartupStack is initialized
                 if (!window.StartupStack?.initialized) {
                     throw new Error('StartupStack not initialized. Please try again.');
                 }
@@ -64,8 +63,9 @@
 
                 localStorage.setItem('userEmail', email);
 
-                // Register user
+                // Sign up/in user
                 await userManager.signUp(email);
+                showNotification('Check your email for the magic link to complete registration', 'success');
 
                 // Create checkout session
                 const response = await fetch('/.netlify/functions/create-checkout-session', {
@@ -309,8 +309,9 @@
 
                 localStorage.setItem('userEmail', email);
 
-                // Register user
+                // Sign up/in user
                 await userManager.signUp(email);
+                showNotification('Check your email for the magic link to complete registration', 'success');
 
                 // Create checkout session
                 const response = await fetch('/.netlify/functions/create-checkout-session', {

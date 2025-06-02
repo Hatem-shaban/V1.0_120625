@@ -108,9 +108,9 @@ class StartupStackAI {
 
 // User Management
 class UserManager {
-    async signUp(email, referralCode = null) {
+    async signUp(email) {
         try {
-            // First check if user exists
+            // Check if user exists
             const { data: existingUser } = await supabase
                 .from('users')
                 .select('id, email')
@@ -118,52 +118,37 @@ class UserManager {
                 .single();
 
             if (existingUser) {
-                console.log('User already exists:', existingUser);
                 return existingUser;
             }
 
-            // Create new user with error handling
-            const { data, error } = await supabase
+            // Create magic link session
+            const { data, error } = await supabase.auth.signInWithOtp({
+                email: email,
+                options: {
+                    shouldCreateUser: true,
+                }
+            });
+
+            if (error) throw error;
+
+            // Create user record
+            const { data: userData, error: userError } = await supabase
                 .from('users')
                 .insert([{
                     email: email,
-                    referred_by: referralCode ? await this.getUserByReferralCode(referralCode) : null,
                     created_at: new Date().toISOString(),
-                    subscription_status: 'active'
+                    subscription_status: 'pending'
                 }])
                 .select()
                 .single();
 
-            if (error) {
-                console.error('Supabase insert error:', error);
-                // Try to provide more specific error messages
-                if (error.code === '42501') {
-                    throw new Error('Permission denied. Please check your authentication.');
-                }
-                throw error;
-            }
+            if (userError) throw userError;
 
-            if (!data) {
-                throw new Error('No data returned from insert operation');
-            }
-
-            console.log('User created successfully:', data);
-            return data;
-
+            return userData;
         } catch (error) {
             console.error('Error in signUp:', error);
             throw error;
         }
-    }
-
-    async getUserByReferralCode(code) {
-        const { data } = await supabase
-            .from('users')
-            .select('id')
-            .eq('referral_code', code)
-            .single();
-        
-        return data?.id || null;
     }
 
     async trackToolUsage(userId, toolName, inputData, outputData) {
@@ -191,10 +176,6 @@ class UserManager {
 // Initialize and export
 async function initializeStartupStack() {
     try {
-        // Initialize anonymous session first
-        const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
-        if (authError) throw authError;
-        
         // Create instances
         const aiTools = new StartupStackAI();
         const userManager = new UserManager();
@@ -218,5 +199,5 @@ async function initializeStartupStack() {
     }
 }
 
-// Export the initialization function instead of a static object
+// Export the initialization function
 export default initializeStartupStack();
