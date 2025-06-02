@@ -8,7 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 // AI Tool Functions
 class StartupStackAI {
     constructor() {
-        this.openaiKey = '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';
+        this.openaiKey = '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';
     }
 
     async callOpenAI(prompt) {
