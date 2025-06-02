@@ -3,16 +3,17 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 exports.handler = async (event) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Content-Type': 'application/json',
         'Content-Security-Policy': `
             default-src 'self';
-            script-src 'self' https://*.stripe.com https://*.skypack.dev 'unsafe-inline';
-            style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline';
+            script-src 'self' 'unsafe-inline' https://*.stripe.com https://*.skypack.dev https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
+            style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
             img-src 'self' data: https://*;
             connect-src 'self' https://*.supabase.co https://*.stripe.com;
             frame-src https://*.stripe.com;
+            font-src 'self' https://cdnjs.cloudflare.com;
         `.replace(/\s+/g, ' ').trim()
     };
 
