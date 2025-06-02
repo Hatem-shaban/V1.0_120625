@@ -177,5 +177,5 @@ async function initializeStartupStack() {
     }
 }
 
-// Export the initialization function
+// Export the initialization promise
 export default initializeStartupStack();
