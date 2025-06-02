@@ -241,6 +241,79 @@
             document.body.appendChild(notification);
             setTimeout(() => notification.remove(), 5000);
         }
+            // Email Functions
+        function sendWelcomeEmail(userEmail, userName = 'New User') {
+            const templateParams = {
+            to_email: userEmail,
+            to_name: userName,
+            from_name: 'StartupStack',
+            subject: 'Welcome to StartupStack - Your AI Toolkit Awaits!',
+            message: `
+            🎉 Welcome to StartupStack!
+
+            Your AI-powered entrepreneur toolkit is ready to use:
+            
+            ✅ Business Name Generator
+            ✅ Logo Creator  
+            ✅ Pitch Deck Templates
+            ✅ Market Research Tool
+            ✅ Content Calendar
+            ✅ Email Templates
+            ✅ Legal Documents
+            ✅ Financial Projections
+
+            Login here: ${window.location.origin}/dashboard
+            
+            Questions? Just reply to this email.
+            
+            Let's build something amazing!
+            
+            - The StartupStack Team
+            `
+         };
+
+         emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
+            .then(function(response) {
+                console.log('Welcome email sent!', response.status);
+                showNotification('Welcome email sent! Check your inbox.');
+            }, function(error) {
+                console.log('Email failed:', error);
+            });
+        }
+
+        function sendTrialEndingEmail(userEmail) {
+         const templateParams = {
+            to_email: userEmail,
+            subject: 'Your StartupStack trial ends in 3 days',
+            message: `Your StartupStack free trial ends in 3 days. 
+                     Upgrade now to keep access to all your AI tools: 
+                     ${window.location.origin}/upgrade`
+            };
+
+            emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams);
+            }
+
+        // User signup with email capture
+        async function captureEmail() {
+            const email = prompt('Enter your email to start your free trial:');
+            if (!email || !email.includes('@')) {
+            alert('Please enter a valid email address');
+            return;
+            }
+        
+            localStorage.setItem('userEmail', email);
+            sendWelcomeEmail(email);
+        
+            // Store in Supabase (if you set it up)
+            if (window.supabase) {
+                await window.supabase
+                .from('users')
+                .insert([{ email: email }]);
+            }
+        
+            // Proceed to checkout
+            startCheckout();
+        }
     </script>
 </body>
 </html>
