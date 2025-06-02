@@ -314,6 +314,30 @@
             // Proceed to checkout
             startCheckout();
         }
+        
+        // URL parameter handling (for referrals, success pages, etc.)
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // Handle success page
+    if (window.location.pathname.includes('success')) {
+        showNotification('Payment successful! Welcome to StartupStack!');
+        const email = localStorage.getItem('userEmail');
+        if (email) {
+            sendWelcomeEmail(email);
+        }
+    }
+
+    // Handle referral codes
+    const referralCode = getUrlParameter('ref');
+    if (referralCode) {
+        localStorage.setItem('referralCode', referralCode);
+        showNotification('Referral code applied! You and your referrer will both get benefits.');
+    }
     </script>
 </body>
 </html>
