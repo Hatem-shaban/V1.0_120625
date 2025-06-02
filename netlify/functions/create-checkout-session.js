@@ -6,8 +6,14 @@ exports.handler = async (event) => {
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Content-Type': 'application/json',
-        // Add CSP headers
-        'Content-Security-Policy': "default-src 'self' https://*.stripe.com https://*.stripe.network;"
+        'Content-Security-Policy': `
+            default-src 'self';
+            script-src 'self' https://*.stripe.com https://*.skypack.dev 'unsafe-inline';
+            style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline';
+            img-src 'self' data: https://*;
+            connect-src 'self' https://*.supabase.co https://*.stripe.com;
+            frame-src https://*.stripe.com;
+        `.replace(/\s+/g, ' ').trim()
     };
 
     if (event.httpMethod === 'OPTIONS') {

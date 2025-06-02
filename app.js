@@ -110,7 +110,7 @@ class StartupStackAI {
 class UserManager {
     async signUp(email) {
         try {
-            // Check if user exists
+            // Check if user exists first
             const { data: existingUser } = await supabase
                 .from('users')
                 .select('id, email')
@@ -121,11 +121,11 @@ class UserManager {
                 return existingUser;
             }
 
-            // Create magic link session
+            // Send magic link for authentication
             const { data, error } = await supabase.auth.signInWithOtp({
                 email: email,
                 options: {
-                    shouldCreateUser: true,
+                    emailRedirectTo: window.location.origin
                 }
             });
 
@@ -136,8 +136,7 @@ class UserManager {
                 .from('users')
                 .insert([{
                     email: email,
-                    created_at: new Date().toISOString(),
-                    subscription_status: 'pending'
+                    created_at: new Date().toISOString()
                 }])
                 .select()
                 .single();
@@ -147,27 +146,6 @@ class UserManager {
             return userData;
         } catch (error) {
             console.error('Error in signUp:', error);
-            throw error;
-        }
-    }
-
-    async trackToolUsage(userId, toolName, inputData, outputData) {
-        try {
-            const { error } = await supabase
-                .from('tool_usage')
-                .insert([{
-                    user_id: userId,
-                    tool_name: toolName,
-                    input_data: inputData,
-                    output_data: outputData
-                }]);
-
-            if (error) {
-                console.error('Error tracking tool usage:', error);
-                throw error;
-            }
-        } catch (error) {
-            console.error('Failed to track tool usage:', error);
             throw error;
         }
     }
