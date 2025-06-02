@@ -5,6 +5,16 @@ const supabaseUrl = 'https://ygnrdquwnafkbkxirtae.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnbnJkcXV3bmFma2JreGlydGFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNTY3MjMsImV4cCI6MjA2MzczMjcyM30.R1QNPExVxHJ8wQjvkuOxfPH0Gf1KR4HOafaP3flPWaI'
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+// Initialize anonymous session
+await supabase.auth.signInAnonymously()
+    .then(({ data, error }) => {
+        if (error) {
+            console.error('Auth error:', error);
+            throw error;
+        }
+        console.log('Anonymous session created:', data);
+    });
+
 // AI Tool Functions
 class StartupStackAI {
     constructor() {
@@ -100,37 +110,49 @@ class StartupStackAI {
 class UserManager {
     async signUp(email, referralCode = null) {
         try {
-            // Check if user already exists
+            // First check if user exists
             const { data: existingUser } = await supabase
                 .from('users')
-                .select('id')
+                .select('id, email')
                 .eq('email', email)
                 .single();
 
             if (existingUser) {
+                console.log('User already exists:', existingUser);
                 return existingUser;
             }
 
-            // Create new user
+            // Create new user with error handling
             const { data, error } = await supabase
                 .from('users')
-                .insert([{ 
+                .insert([{
                     email: email,
                     referred_by: referralCode ? await this.getUserByReferralCode(referralCode) : null,
                     created_at: new Date().toISOString(),
                     subscription_status: 'active'
                 }])
-                .select();
+                .select()
+                .single();
 
             if (error) {
-                console.error('Supabase error:', error);
+                console.error('Supabase insert error:', error);
+                // Try to provide more specific error messages
+                if (error.code === '42501') {
+                    throw new Error('Permission denied. Please check your authentication.');
+                }
                 throw error;
             }
 
-            return data[0];
+            if (!data) {
+                throw new Error('No data returned from insert operation');
+            }
+
+            console.log('User created successfully:', data);
+            return data;
+
         } catch (error) {
-            console.error('Error signing up:', error);
-            throw error; // Propagate error for proper handling
+            console.error('Error in signUp:', error);
+            throw error;
         }
     }
 
