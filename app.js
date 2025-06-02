@@ -188,13 +188,29 @@ class UserManager {
     }
 }
 
-// Initialize
-const aiTools = new StartupStackAI();
-const userManager = new UserManager();
+// Initialize and export
+async function initializeStartupStack() {
+    try {
+        // Initialize anonymous session first
+        const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+        if (authError) throw authError;
+        
+        // Create instances
+        const aiTools = new StartupStackAI();
+        const userManager = new UserManager();
 
-// Export for use in HTML
-window.StartupStack = {
-    aiTools,
-    userManager,
-    supabase
-};
+        // Export for use in HTML
+        window.StartupStack = {
+            aiTools,
+            userManager,
+            supabase
+        };
+
+        console.log('StartupStack initialized');
+    } catch (error) {
+        console.error('Error initializing StartupStack:', error);
+    }
+}
+
+// Call the initialize function
+initializeStartupStack();

@@ -16,7 +16,88 @@
             limitRate: true
         });
     </script>
-    <script type="module" src="app.js"></script>
+    <script type="module">
+        import StartupStack from './app.js';
+        
+        // Make startCheckout available globally
+        window.startCheckout = async function(event) {
+            event.preventDefault();
+            
+            try {
+                const button = event.currentTarget;
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+                // Check if StartupStack is initialized
+                if (!window.StartupStack) {
+                    throw new Error('StartupStack not initialized');
+                }
+
+                const { userManager } = window.StartupStack;
+
+                // Validate email
+                const email = prompt('Enter your email to continue:');
+                if (!email || !email.includes('@')) {
+                    throw new Error('Please enter a valid email address');
+                }
+
+                localStorage.setItem('userEmail', email);
+
+                // Register user
+                await userManager.signUp(email);
+
+                // Create checkout session
+                const response = await fetch('/.netlify/functions/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        customerEmail: email
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (!data.id) {
+                    throw new Error('Invalid response from server');
+                }
+
+                // Redirect to Stripe checkout
+                const { error } = await stripe.redirectToCheckout({
+                    sessionId: data.id
+                });
+
+                if (error) throw error;
+
+            } catch (error) {
+                console.error('Checkout error:', error);
+                showNotification(error.message || 'Something went wrong', 'error');
+            } finally {
+                if (event.currentTarget) {
+                    event.currentTarget.disabled = false;
+                    event.currentTarget.innerHTML = 'Subscribe Now';
+                }
+            }
+        };
+
+        // Make showNotification available globally
+        window.showNotification = function(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.innerHTML = `
+                <div style="position: fixed; top: 20px; right: 20px; 
+                            background: ${type === 'success' ? '#10B981' : '#EF4444'}; 
+                            color: white; padding: 12px 20px; border-radius: 8px; 
+                            z-index: 1001;">${message}</div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 5000);
+        };
+    </script>
 
 </head>
 <body class="bg-gray-900 text-white">
