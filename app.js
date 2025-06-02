@@ -32,43 +32,46 @@ class StartupStackAI {
 
 // User Management
 class UserManager {
-    async signUp(email, referralCode = null) {
+    async signUp(email) {
         try {
-            // Check if user already exists
-            const { data: existingUser } = await supabase
+            // Check if user exists
+            const { data: existingUser, error: selectError } = await supabase
                 .from('users')
-                .select('id')
+                .select('id, email')
                 .eq('email', email)
                 .single();
+
+            if (selectError && selectError.code !== 'PGRST116') {
+                console.error('Error checking existing user:', selectError);
+                throw selectError;
+            }
 
             if (existingUser) {
                 return existingUser;
             }
 
-            // Create new user
-            const { data, error } = await supabase
+            // Insert new user
+            const { data: newUser, error: insertError } = await supabase
                 .from('users')
-                .insert([{ 
+                .insert([{
                     email: email,
-                    referred_by: referralCode ? await this.getUserByReferralCode(referralCode) : null,
                     created_at: new Date().toISOString(),
-                    subscription_status: 'active'
+                    subscription_status: 'pending'
                 }])
-                .select();
+                .select()
+                .single();
 
-            if (error) {
-                console.error('Supabase error:', error);
-                throw error;
+            if (insertError) {
+                console.error('Error creating user:', insertError);
+                throw insertError;
             }
 
-            return data[0];
+            return newUser;
         } catch (error) {
-            console.error('Error signing up:', error);
-            throw error; // Propagate error for proper handling
+            console.error('Error in signUp:', error);
+            throw error;
         }
     }
-
-    // ...existing code...
 }
 
 // Initialize and export
