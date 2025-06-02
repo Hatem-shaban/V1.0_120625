@@ -16,6 +16,7 @@
             limitRate: true
         });
     </script>
+    <script type="module" src="app.js"></script>
 
 </head>
 <body class="bg-gray-900 text-white">
@@ -167,14 +168,11 @@
         const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
 
         async function startCheckout(event) {
-            // Prevent default button behavior
             event.preventDefault();
             
             try {
-                // Show loading state
                 const button = event.currentTarget;
                 button.disabled = true;
-                const originalText = button.innerHTML;
                 button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
                 // Validate email
@@ -183,15 +181,12 @@
                     throw new Error('Please enter a valid email address');
                 }
 
-                // Store email
                 localStorage.setItem('userEmail', email);
 
-                // Create checkout session
                 const response = await fetch('/.netlify/functions/create-checkout-session', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({
                         customerEmail: email
@@ -199,8 +194,7 @@
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.text();
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorData}`);
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -209,23 +203,23 @@
                     throw new Error('Invalid response from server');
                 }
 
-                // Redirect to Stripe Checkout
+                // Register user before checkout
+                const { userManager } = window.StartupStack;
+                await userManager.signUp(email);
+
                 const { error } = await stripe.redirectToCheckout({
                     sessionId: data.id
                 });
 
-                if (error) {
-                    throw error;
-                }
+                if (error) throw error;
 
             } catch (error) {
                 console.error('Checkout error:', error);
                 showNotification(error.message || 'Something went wrong', 'error');
             } finally {
-                if (event && event.currentTarget) {
-                    const button = event.currentTarget;
-                    button.disabled = false;
-                    button.innerHTML = '<i class="fas fa-credit-card mr-2"></i>Subscribe Now';
+                if (event.currentTarget) {
+                    event.currentTarget.disabled = false;
+                    event.currentTarget.innerHTML = 'Subscribe Now';
                 }
             }
         }
@@ -324,89 +318,52 @@
         }
 
         // Handle success page
-    if (window.location.pathname.includes('success')) {
-        showNotification('Payment successful! Welcome to StartupStack!');
-        const email = localStorage.getItem('userEmail');
-        if (email) {
-            sendWelcomeEmail(email);
-        }
-    }
+    async function handlePaymentSuccess() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    
+    if (!sessionId) return;
 
-    // Handle referral codes
-    const referralCode = getUrlParameter('ref');
-    if (referralCode) {
-        localStorage.setItem('referralCode', referralCode);
-        showNotification('Referral code applied! You and your referrer will both get benefits.');
-    }
-
-    async function handleSuccessfulPayment(subscriptionId) {
-        try {
-            const email = localStorage.getItem('userEmail');
-            if (!email) throw new Error('User email not found');
-
-            // Initialize StartupStack
-            const { aiTools, userManager } = window.StartupStack;
-
-            // Register user in Supabase
-            const user = await userManager.signUp(email);
-            if (!user) throw new Error('Failed to register user');
-
-            // Store user data in localStorage
-            localStorage.setItem('userId', user.id);
-            localStorage.setItem('subscriptionId', subscriptionId);
-            
-            // Initialize AI tools
-            await initializeAITools(user.id);
-
-            showNotification('Payment successful! Welcome to StartupStack!', 'success');
-            
-            // Redirect to dashboard after short delay
-            setTimeout(() => {
-                window.location.href = '/dashboard.html';
-            }, 2000);
-        } catch (error) {
-            console.error('Post-payment setup error:', error);
-            showNotification('Account setup error: ' + error.message, 'error');
-        }
-    }
-
-    async function initializeAITools(userId) {
     try {
+        const email = localStorage.getItem('userEmail');
+        if (!email) throw new Error('User email not found');
+
         const { aiTools, userManager } = window.StartupStack;
 
-        // Test each AI tool with sample data
-        const tools = [
-            {
-                name: 'businessNameGenerator',
-                func: () => aiTools.generateBusinessNames('technology', 'innovative, modern'),
-            },
-            {
-                name: 'contentCalendar',
-                func: () => aiTools.generateContentCalendar('tech startup', 'entrepreneurs'),
-            },
-            {
-                name: 'emailTemplates',
-                func: () => aiTools.generateEmailTemplates('welcome series', 'technology'),
-            },
-            {
-                name: 'marketResearch',
-                func: () => aiTools.analyzeMarket('SaaS', 'global'),
-            }
-        ];
-
-        // Initialize each tool
-        for (const tool of tools) {
+        // Update user status
+        const user = await userManager.signUp(email);
+        
+        // Initialize AI tools
+        await Promise.all([
+            aiTools.generateBusinessNames('technology', 'innovative'),
+            aiTools.generateContentCalendar('tech startup', 'entrepreneurs'),
+            aiTools.generateEmailTemplates('welcome', 'technology'),
+            aiTools.analyzeMarket('SaaS', 'global')
+        ].map(async (promise) => {
             try {
-                const result = await tool.func();
-                await userManager.trackToolUsage(userId, tool.name, 'initialization', result);
+                const result = await promise;
+                await userManager.trackToolUsage(user.id, 'initialization', null, result);
             } catch (error) {
-                console.error(`Error initializing ${tool.name}:`, error);
+                console.error('Tool initialization error:', error);
             }
-        }
+        }));
+
+        showNotification('Payment successful! AI tools initialized!', 'success');
+        
+        // Redirect to dashboard
+        setTimeout(() => {
+            window.location.href = '/dashboard.html';
+        }, 2000);
+
     } catch (error) {
-        console.error('Tool initialization error:', error);
-        throw new Error('Failed to initialize AI tools');
+        console.error('Success page error:', error);
+        showNotification('Error initializing account: ' + error.message, 'error');
     }
+}
+
+// Check for success page
+if (window.location.pathname.includes('success')) {
+    handlePaymentSuccess();
 }
     </script>
 </body>

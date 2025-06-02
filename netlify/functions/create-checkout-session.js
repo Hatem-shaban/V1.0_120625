@@ -45,7 +45,7 @@ exports.handler = async (event) => {
                     quantity: 1,
                 },
             ],
-            success_url: `${process.env.URL}/success`,
+            success_url: `${process.env.URL}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.URL}/cancel`,
             customer_email: customerEmail,
         });

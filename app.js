@@ -145,14 +145,24 @@ class UserManager {
     }
 
     async trackToolUsage(userId, toolName, inputData, outputData) {
-        await supabase
-            .from('tool_usage')
-            .insert([{
-                user_id: userId,
-                tool_name: toolName,
-                input_data: inputData,
-                output_data: outputData
-            }]);
+        try {
+            const { error } = await supabase
+                .from('tool_usage')
+                .insert([{
+                    user_id: userId,
+                    tool_name: toolName,
+                    input_data: inputData,
+                    output_data: outputData
+                }]);
+
+            if (error) {
+                console.error('Error tracking tool usage:', error);
+                throw error;
+            }
+        } catch (error) {
+            console.error('Failed to track tool usage:', error);
+            throw error;
+        }
     }
 }
 
