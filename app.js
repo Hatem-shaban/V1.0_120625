@@ -100,19 +100,37 @@ class StartupStackAI {
 class UserManager {
     async signUp(email, referralCode = null) {
         try {
+            // Check if user already exists
+            const { data: existingUser } = await supabase
+                .from('users')
+                .select('id')
+                .eq('email', email)
+                .single();
+
+            if (existingUser) {
+                return existingUser;
+            }
+
+            // Create new user
             const { data, error } = await supabase
                 .from('users')
                 .insert([{ 
                     email: email,
-                    referred_by: referralCode ? await this.getUserByReferralCode(referralCode) : null
+                    referred_by: referralCode ? await this.getUserByReferralCode(referralCode) : null,
+                    created_at: new Date().toISOString(),
+                    subscription_status: 'active'
                 }])
                 .select();
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error:', error);
+                throw error;
+            }
+
             return data[0];
         } catch (error) {
             console.error('Error signing up:', error);
-            return null;
+            throw error; // Propagate error for proper handling
         }
     }
 
