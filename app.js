@@ -214,3 +214,12 @@ async function initializeStartupStack() {
 
 // Call the initialize function
 initializeStartupStack();
+
+// Export the initialized instance
+const stack = {
+    aiTools: new StartupStackAI(),
+    userManager: new UserManager(),
+    supabase
+};
+
+export default stack;
