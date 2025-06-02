@@ -22,16 +22,34 @@ class StartupStackAI {
                 body: JSON.stringify({
                     model: 'gpt-3.5-turbo',
                     messages: [{ role: 'user', content: prompt }],
-                    max_tokens: 500
+                    max_tokens: 500,
+                    temperature: 0.7,
+                    top_p: 1,
+                    frequency_penalty: 0,
+                    presence_penalty: 0
                 })
             });
 
-            if (!response.ok) throw new Error('OpenAI API error');
             const data = await response.json();
+
+            if (!response.ok) {
+                console.error('OpenAI API Response:', data);
+                throw new Error(data.error?.message || 'OpenAI API error');
+            }
+
+            if (!data.choices?.[0]?.message?.content) {
+                console.error('Unexpected API response format:', data);
+                throw new Error('Invalid response format from OpenAI');
+            }
+
             return data.choices[0].message.content;
         } catch (error) {
             console.error('OpenAI API error:', error);
-            throw error;
+            // Add user-friendly error message
+            const errorMessage = error.message.includes('API key') ? 
+                'Invalid API key configuration' : 
+                'AI service temporarily unavailable';
+            throw new Error(errorMessage);
         }
     }
 
