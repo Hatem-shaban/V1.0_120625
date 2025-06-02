@@ -8,7 +8,6 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3.11.0/dist/email.min.js"></script>
-    <!-- Replace PayPal with Stripe -->
     <script src="https://js.stripe.com/v3/"></script>
     <script>
         emailjs.init({
@@ -22,15 +21,9 @@
         // Initialize StartupStack and make it globally available
         async function initializeApp() {
             try {
-                // Wait for StartupStack to initialize
                 const stack = await startupStackPromise;
                 window.StartupStack = stack;
                 console.log('StartupStack initialized successfully');
-                
-                // Enable any buttons that were disabled
-                document.querySelectorAll('[data-checkout-button]').forEach(button => {
-                    button.disabled = false;
-                });
             } catch (error) {
                 console.error('Failed to initialize StartupStack:', error);
                 showNotification('Failed to initialize application', 'error');
@@ -40,7 +33,7 @@
         // Initialize immediately
         initializeApp();
 
-        // Update your checkout function
+        // Make startCheckout available globally
         window.startCheckout = async function(event) {
             event.preventDefault();
             
@@ -63,9 +56,8 @@
 
                 localStorage.setItem('userEmail', email);
 
-                // Sign up/in user
+                // Register user
                 await userManager.signUp(email);
-                showNotification('Check your email for the magic link to complete registration', 'success');
 
                 // Create checkout session
                 const response = await fetch('/.netlify/functions/create-checkout-session', {
@@ -105,21 +97,7 @@
                 }
             }
         };
-
-        // Make showNotification available globally
-        window.showNotification = function(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.innerHTML = `
-                <div style="position: fixed; top: 20px; right: 20px; 
-                            background: ${type === 'success' ? '#10B981' : '#EF4444'}; 
-                            color: white; padding: 12px 20px; border-radius: 8px; 
-                            z-index: 1001;">${message}</div>
-            `;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 5000);
-        };
     </script>
-
 </head>
 <body class="bg-gray-900 text-white">
     <!-- Hero Section -->
