@@ -46,24 +46,22 @@ exports.handler = async (event) => {
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             mode: 'subscription',
-            line_items: [
-                {
-                    price: process.env.STRIPE_PRICE_ID, // Move price ID to environment variable
-                    quantity: 1,
-                },
-            ],
+            line_items: [{
+                price: process.env.STRIPE_PRICE_ID,
+                quantity: 1,
+            }],
             success_url: `${process.env.URL}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.URL}/cancel`,
             customer_email: customerEmail,
+            metadata: {
+                userId: userId // Add user ID to metadata
+            }
         });
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ 
-                id: session.id,
-                url: session.url 
-            })
+            body: JSON.stringify({ id: session.id })
         };
     } catch (error) {
         console.error('Checkout error:', error);

@@ -6,6 +6,11 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+[[redirects]]
+  from = "/dashboard"
+  to = "/dashboard.html"
+  status = 200
+
 [dev]
   functions = "netlify/functions"
   publish = "."
@@ -25,7 +30,8 @@
       script-src 'self' 'unsafe-inline' https://js.stripe.com https://cdn.jsdelivr.net https://esm.sh https://cdnjs.cloudflare.com;
       style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
       img-src 'self' data: https://*;
-      connect-src 'self' https://*.supabase.co https://js.stripe.com https://api.openai.com;
-      frame-src https://js.stripe.com;
+      connect-src 'self' https://*.supabase.co https://*.stripe.com https://api.openai.com;
+      frame-src https://*.stripe.com;
       font-src 'self' https://cdnjs.cloudflare.com;
+      navigate-to 'self';
     """

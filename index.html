@@ -167,6 +167,50 @@
                 showNotification('Account setup error: ' + error.message, 'error');
             }
         }
+
+        async function handlePaymentSuccess() {
+            // Check if we're on success page
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionId = urlParams.get('session_id');
+            
+            if (sessionId) {
+                try {
+                    const email = localStorage.getItem('userEmail');
+                    if (!email) throw new Error('User email not found');
+
+                    // Get user data
+                    const { data: userData, error: userError } = await window.StartupStack.supabase
+                        .from('users')
+                        .select('*')
+                        .eq('email', email)
+                        .single();
+
+                    if (userError) throw userError;
+
+                    // Update user subscription status
+                    await window.StartupStack.supabase
+                        .from('users')
+                        .update({ subscription_status: 'active' })
+                        .eq('id', userData.id);
+
+                    // Initialize AI tools
+                    await initializeAITools(userData.id);
+
+                    // Store session data
+                    localStorage.setItem('sessionId', sessionId);
+                    localStorage.setItem('userId', userData.id);
+
+                    // Redirect to dashboard
+                    window.location.href = '/dashboard.html';
+                } catch (error) {
+                    console.error('Payment success handling error:', error);
+                    showNotification('Error activating subscription', 'error');
+                }
+            }
+        }
+
+        // Call handler when page loads
+        document.addEventListener('DOMContentLoaded', handlePaymentSuccess);
     </script>
 </head>
 <body class="bg-gray-900 text-white">
