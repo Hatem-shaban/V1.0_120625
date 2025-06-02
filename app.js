@@ -8,7 +8,12 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 // AI Tool Functions
 class StartupStackAI {
     constructor() {
-        this.openaiKey = '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';
+        // Use environment variable instead of hardcoded key
+        this.openaiKey = process.env.OPENAI_API_KEY;
+        if (!this.openaiKey) {
+            console.error('OpenAI API key not found in environment variables');
+            throw new Error('OpenAI API key not configured');
+        }
     }
 
     async callOpenAI(prompt) {
