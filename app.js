@@ -1,5 +1,5 @@
 // Supabase client setup
-import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js'
 
 const supabaseUrl = 'https://ygnrdquwnafkbkxirtae.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnbnJkcXV3bmFma2JreGlydGFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNTY3MjMsImV4cCI6MjA2MzczMjcyM30.R1QNPExVxHJ8wQjvkuOxfPH0Gf1KR4HOafaP3flPWaI'
