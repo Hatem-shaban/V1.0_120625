@@ -17,24 +17,30 @@
         });
     </script>
     <script type="module">
-        import StartupStack from './app.js';
+        import startupStackPromise from './app.js';
         
         // Initialize StartupStack and make it globally available
         async function initializeApp() {
             try {
-                const stack = await StartupStack;
+                // Wait for StartupStack to initialize
+                const stack = await startupStackPromise;
                 window.StartupStack = stack;
                 console.log('StartupStack initialized successfully');
+                
+                // Enable any buttons that were disabled
+                document.querySelectorAll('[data-checkout-button]').forEach(button => {
+                    button.disabled = false;
+                });
             } catch (error) {
                 console.error('Failed to initialize StartupStack:', error);
                 showNotification('Failed to initialize application', 'error');
             }
         }
 
-        // Initialize when the page loads
-        window.addEventListener('load', initializeApp);
+        // Initialize immediately
+        initializeApp();
 
-        // Make startCheckout available globally
+        // Update your checkout function
         window.startCheckout = async function(event) {
             event.preventDefault();
             
@@ -43,22 +49,9 @@
                 button.disabled = true;
                 button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-                // Wait for StartupStack to initialize if needed
-                if (!window.StartupStack) {
-                    await new Promise((resolve) => {
-                        const checkInterval = setInterval(() => {
-                            if (window.StartupStack) {
-                                clearInterval(checkInterval);
-                                resolve();
-                            }
-                        }, 100);
-                        
-                        // Timeout after 5 seconds
-                        setTimeout(() => {
-                            clearInterval(checkInterval);
-                            throw new Error('StartupStack initialization timeout');
-                        }, 5000);
-                    });
+                // Check if StartupStack is initialized
+                if (!window.StartupStack?.initialized) {
+                    throw new Error('StartupStack not initialized. Please try again.');
                 }
 
                 const { userManager } = window.StartupStack;
@@ -237,7 +230,11 @@
                         <li><i class="fas fa-check text-yellow-400 mr-2"></i>Advanced Features</li>
                         <li><i class="fas fa-check text-yellow-400 mr-2"></i>API Access</li>
                     </ul>
-                    <button onclick="startCheckout(event)" class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition duration-200">
+                    <button 
+    onclick="startCheckout(event)" 
+    data-checkout-button
+    disabled
+    class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition duration-200">
     <i class="fas fa-credit-card mr-2"></i>Subscribe Now
 </button>
                 </div>

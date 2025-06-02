@@ -199,27 +199,24 @@ async function initializeStartupStack() {
         const aiTools = new StartupStackAI();
         const userManager = new UserManager();
 
-        // Export for use in HTML
-        window.StartupStack = {
+        // Create the stack object
+        const stack = {
             aiTools,
             userManager,
-            supabase
+            supabase,
+            initialized: true
         };
 
-        console.log('StartupStack initialized');
+        // Make it globally available
+        window.StartupStack = stack;
+
+        console.log('StartupStack initialized successfully');
+        return stack;
     } catch (error) {
         console.error('Error initializing StartupStack:', error);
+        throw error;
     }
 }
 
-// Call the initialize function
-initializeStartupStack();
-
-// Export the initialized instance
-const stack = {
-    aiTools: new StartupStackAI(),
-    userManager: new UserManager(),
-    supabase
-};
-
-export default stack;
+// Export the initialization function instead of a static object
+export default initializeStartupStack();
