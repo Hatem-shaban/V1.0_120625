@@ -97,6 +97,76 @@
                 }
             }
         };
+
+        async function initializeAITools(userId) {
+            try {
+                const { aiTools, userManager } = window.StartupStack;
+
+                // Test each AI tool with sample data
+                const tools = [
+                    {
+                        name: 'businessNameGenerator',
+                        func: () => aiTools.generateBusinessNames('technology', 'innovative, modern'),
+                    },
+                    {
+                        name: 'contentCalendar',
+                        func: () => aiTools.generateContentCalendar('tech startup', 'entrepreneurs'),
+                    },
+                    {
+                        name: 'emailTemplates',
+                        func: () => aiTools.generateEmailTemplates('welcome series', 'technology'),
+                    },
+                    {
+                        name: 'marketResearch',
+                        func: () => aiTools.analyzeMarket('SaaS', 'global'),
+                    }
+                ];
+
+                // Initialize each tool
+                for (const tool of tools) {
+                    try {
+                        const result = await tool.func();
+                        await userManager.trackToolUsage(userId, tool.name, 'initialization', result);
+                    } catch (error) {
+                        console.error(`Error initializing ${tool.name}:`, error);
+                    }
+                }
+            } catch (error) {
+                console.error('Tool initialization error:', error);
+                throw new Error('Failed to initialize AI tools');
+            }
+        }
+
+        async function handleSuccessfulPayment(subscriptionId) {
+            try {
+                const email = localStorage.getItem('userEmail');
+                if (!email) throw new Error('User email not found');
+
+                // Initialize StartupStack
+                const { aiTools, userManager } = window.StartupStack;
+
+                // Register user in Supabase
+                const user = await userManager.signUp(email);
+                if (!user) throw new Error('Failed to register user');
+
+                // Store user data in localStorage
+                localStorage.setItem('userId', user.id);
+                localStorage.setItem('subscriptionId', subscriptionId);
+                
+                // Initialize AI tools
+                await initializeAITools(user.id);
+
+                showNotification('Payment successful! Welcome to StartupStack!', 'success');
+                
+                // Redirect to dashboard after short delay
+                setTimeout(() => {
+                    window.location.href = '/dashboard.html';
+                }, 2000);
+            } catch (error) {
+                console.error('Post-payment setup error:', error);
+                showNotification('Account setup error: ' + error.message, 'error');
+            }
+        }
     </script>
 </head>
 <body class="bg-gray-900 text-white">
