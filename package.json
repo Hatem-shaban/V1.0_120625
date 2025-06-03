@@ -1,9 +1,14 @@
 {
   "name": "startupstack",
   "version": "1.0.0",
-  "private": true,
+  "description": "StartupStack AI-Powered SaaS Bundle",
+  "main": "index.js",
   "dependencies": {
-    "stripe": "^13.8.0"
+    "openai": "^4.24.1",
+    "stripe": "^14.10.0"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^2.4.1"
   },
   "scripts": {
     "dev": "netlify dev",
