@@ -100,5 +100,36 @@
             </div>
         </main>
     </div>
+
+    <script>
+    (function checkAuth() {
+        const userId = localStorage.getItem('userId');
+        const userEmail = localStorage.getItem('userEmail');
+        
+        if (!userId || !userEmail) {
+            window.location.href = '/?auth=required';
+            return;
+        }
+        
+        // Verify user exists in Supabase
+        window.StartupStack?.supabase
+            .from('users')
+            .select('id, subscription_status')
+            .eq('id', userId)
+            .single()
+            .then(({ data, error }) => {
+                if (error || !data) {
+                    localStorage.removeItem('userId');
+                    localStorage.removeItem('userEmail');
+                    window.location.href = '/?auth=invalid';
+                    return;
+                }
+                
+                if (data.subscription_status !== 'active') {
+                    window.location.href = '/?subscription=required';
+                }
+            });
+    })();
+    </script>
 </body>
 </html>

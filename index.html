@@ -577,46 +577,73 @@
 
     async function handleAuth(event) {
         event.preventDefault();
-        const email = document.getElementById('email').value;
-
-        if (!email || !email.includes('@')) {
-            showNotification('Please enter a valid email address', 'error');
-            return;
-        }
-
+        
         try {
-            const { userManager } = window.StartupStack;
+            const email = document.getElementById('email').value;
+            if (!email || !email.includes('@')) {
+                showNotification('Please enter a valid email address', 'error');
+                return;
+            }
+
+            const button = event.submitter;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            const { data: existingUser, error: userError } = await window.StartupStack.supabase
+                .from('users')
+                .select('*')
+                .eq('email', email)
+                .single();
 
             if (isLoginMode) {
-                // Check if user exists
-                const { data: user, error } = await window.StartupStack.supabase
-                    .from('users')
-                    .select('*')
-                    .eq('email', email)
-                    .single();
-
-                if (error || !user) {
-                    showNotification('User not found. Please sign up.', 'error');
-                    toggleAuthMode();
+                if (!existingUser) {
+                    showNotification('Account not found. Please sign up.', 'error');
+                    toggleAuthMode(); // Switch to signup mode
+                    return;
+                }
+                
+                // Successful login
+                localStorage.setItem('userEmail', email);
+                localStorage.setItem('userId', existingUser.id);
+                window.location.href = '/dashboard.html';
+            } else {
+                // Signup flow
+                if (existingUser) {
+                    showNotification('Account already exists. Please log in.', 'error');
+                    toggleAuthMode(); // Switch to login mode
                     return;
                 }
 
-                // Existing user - redirect to dashboard
+                // Create new user
+                const { data: newUser, error: createError } = await window.StartupStack.supabase
+                    .from('users')
+                    .insert([{
+                        email: email,
+                        created_at: new Date().toISOString(),
+                        subscription_status: 'pending'
+                    }])
+                    .select()
+                    .single();
+
+                if (createError) throw createError;
+
+                // Store user data
                 localStorage.setItem('userEmail', email);
-                localStorage.setItem('userId', user.id);
-                window.location.href = '/dashboard.html';
-            } else {
-                // New user - continue with signup
-                await userManager.signUp(email);
-                localStorage.setItem('userEmail', email);
+                localStorage.setItem('userId', newUser.id);
+
+                // Proceed with checkout
                 closeAuthModal();
-                
-                // Continue with checkout process
-                createCheckoutSession(email);
+                await createCheckoutSession(email);
             }
         } catch (error) {
-            console.error('Auth error:', error);
+            console.error('Authentication error:', error);
             showNotification(error.message || 'Authentication failed', 'error');
+        } finally {
+            const button = event.submitter;
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = isLoginMode ? 'Log In' : 'Sign Up';
+            }
         }
     }
 
