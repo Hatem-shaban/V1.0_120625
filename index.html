@@ -43,27 +43,26 @@
         // Make startCheckout available globally
         window.startCheckout = async function(event) {
             event.preventDefault();
+            const currentButton = event.currentTarget;
             
             try {
-                const button = event.currentTarget;
-                button.disabled = true;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                currentButton.disabled = true;
+                currentButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
                 // Initialize StartupStack if needed
                 if (!window.StartupStack?.initialized) {
                     await initializeApp();
                 }
 
-                // Open auth modal instead of prompt
                 openAuthModal();
-                
+
             } catch (error) {
                 console.error('Checkout error:', error);
                 showNotification(error.message || 'Something went wrong', 'error');
             } finally {
-                if (event.currentTarget) {
-                    event.currentTarget.disabled = false;
-                    button.innerHTML = '<i class="fas fa-credit-card mr-2"></i>Subscribe Now';
+                if (currentButton) {
+                    currentButton.disabled = false;
+                    currentButton.innerHTML = '<i class="fas fa-credit-card mr-2"></i>Subscribe Now';
                 }
             }
         };
@@ -418,30 +417,29 @@
 
         async function startCheckout(event) {
             event.preventDefault();
-            
-            try {
-                const button = event.currentTarget;
-                button.disabled = true;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    const currentButton = event.currentTarget;
+    
+    try {
+        currentButton.disabled = true;
+        currentButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-                // Initialize StartupStack if needed
-                if (!window.StartupStack?.initialized) {
-                    await initializeApp();
-                }
-
-                // Open auth modal instead of prompt
-                openAuthModal();
-                
-            } catch (error) {
-                console.error('Checkout error:', error);
-                showNotification(error.message || 'Something went wrong', 'error');
-            } finally {
-                if (event.currentTarget) {
-                    event.currentTarget.disabled = false;
-                    button.innerHTML = '<i class="fas fa-credit-card mr-2"></i>Subscribe Now';
-                }
-            }
+        // Initialize StartupStack if needed
+        if (!window.StartupStack?.initialized) {
+            await initializeApp();
         }
+
+        openAuthModal();
+
+    } catch (error) {
+        console.error('Checkout error:', error);
+        showNotification(error.message || 'Something went wrong', 'error');
+    } finally {
+        if (currentButton) {
+            currentButton.disabled = false;
+            currentButton.innerHTML = '<i class="fas fa-credit-card mr-2"></i>Subscribe Now';
+        }
+    }
+}
     </script>
 
     <!-- EmailJS Integration (for contact form) -->
@@ -471,18 +469,19 @@
 
     <script>
         // Global notification function
-        window.showNotification = function(message, type = 'info') {
+        window.showNotification = function(message, type = 'error') {
             const notification = document.createElement('div');
             notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${
                 type === 'error' ? 'bg-red-600' : 
                 type === 'success' ? 'bg-green-600' : 
                 'bg-blue-600'
-            }`;
+            } transition-opacity duration-300`;
             notification.textContent = message;
             document.body.appendChild(notification);
             
             setTimeout(() => {
-                notification.remove();
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
             }, 3000);
         };
     </script>
@@ -517,11 +516,11 @@
     document.getElementById('authForm').addEventListener('submit', async (event) => {
         event.preventDefault();
         const email = document.getElementById('email').value;
-        const button = event.submitter;
+        const submitButton = event.submitter;
         
         try {
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
             if (isLoginMode) {
                 // Login flow
@@ -545,7 +544,7 @@
                     return;
                 }
 
-                // Need subscription - create checkout session
+                // Create checkout session for existing user
                 const response = await fetch('/.netlify/functions/create-checkout-session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -556,14 +555,29 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to create checkout session');
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to create checkout session');
                 }
 
                 const { id: sessionId } = await response.json();
+                const stripe = Stripe(STRIPE_PUBLIC_KEY);
                 await stripe.redirectToCheckout({ sessionId });
 
             } else {
-                // Signup flow - create new user
+                // Check for existing user first
+                const { data: existingUser } = await window.StartupStack.supabase
+                    .from('users')
+                    .select('id, email')
+                    .eq('email', email)
+                    .single();
+
+                if (existingUser) {
+                    isLoginMode = true;
+                    document.getElementById('authTitle').textContent = 'Log In';
+                    throw new Error('Email already exists. Please log in.');
+                }
+
+                // Create new user
                 const { data: newUser, error } = await window.StartupStack.supabase
                     .from('users')
                     .insert([{
@@ -574,12 +588,19 @@
                     .select()
                     .single();
 
-                if (error) throw error;
+                if (error) {
+                    if (error.code === '23505') { // Duplicate key error
+                        isLoginMode = true;
+                        document.getElementById('authTitle').textContent = 'Log In';
+                        throw new Error('Email already exists. Please log in.');
+                    }
+                    throw error;
+                }
 
                 localStorage.setItem('userId', newUser.id);
                 localStorage.setItem('userEmail', email);
-                
-                // Redirect to checkout
+
+                // Create checkout session for new user
                 const response = await fetch('/.netlify/functions/create-checkout-session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -589,17 +610,21 @@
                     })
                 });
 
-                if (!response.ok) throw new Error('Failed to create checkout session');
-                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to create checkout session');
+                }
+
                 const { id: sessionId } = await response.json();
+                const stripe = Stripe(STRIPE_PUBLIC_KEY);
                 await stripe.redirectToCheckout({ sessionId });
             }
         } catch (error) {
             console.error('Auth error:', error);
             showNotification(error.message || 'Authentication failed', 'error');
         } finally {
-            button.disabled = false;
-            button.innerHTML = isLoginMode ? 'Log In' : 'Sign Up';
+            submitButton.disabled = false;
+            submitButton.innerHTML = isLoginMode ? 'Log In' : 'Sign Up';
         }
     });
 </script>
