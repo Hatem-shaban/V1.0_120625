@@ -120,26 +120,16 @@
 
     async function checkAuth() {
         try {
-            // Prevent flashing by adding loading state
-            if (!authCheckComplete) {
-                document.body.style.opacity = '0';
-            }
-
             const userId = localStorage.getItem('userId');
             const userEmail = localStorage.getItem('userEmail');
             
             if (!userId || !userEmail) {
-                window.location.href = '/?auth=required';
+                window.location.replace('/?auth=required');
                 return;
             }
 
-            // Initialize StartupStack first
             const stack = await startupStackPromise;
-            if (!stack || !stack.supabase) {
-                throw new Error('StartupStack not initialized properly');
-            }
 
-            // Verify user and subscription
             const { data: user, error } = await stack.supabase
                 .from('users')
                 .select('*')
@@ -151,26 +141,23 @@
                 throw new Error('User verification failed');
             }
 
-            // Check subscription status
             if (user.subscription_status !== 'active') {
-                window.location.href = '/?subscription=required';
+                window.location.replace('/?subscription=required');
                 return;
             }
 
-            // Update UI only after successful verification
+            // Show dashboard content
+            document.body.style.opacity = '1';
             document.getElementById('userEmail').textContent = userEmail;
+
+            // Enable AI tools
             document.querySelectorAll('[data-ai-tool]').forEach(button => {
                 button.disabled = false;
             });
 
-            // Show the dashboard
-            document.body.style.opacity = '1';
-            authCheckComplete = true;
-
         } catch (error) {
             console.error('Auth check error:', error);
-            localStorage.clear();
-            window.location.href = '/?auth=error';
+            window.location.replace('/?auth=error');
         }
     }
 

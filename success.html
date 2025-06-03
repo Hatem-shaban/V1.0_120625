@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activating Subscription - StartupStack</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script type="module">
+        import startupStackPromise from './app.js';
+
+        async function activateSubscription() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const sessionId = params.get('session_id');
+                const userId = params.get('userId');
+
+                if (!sessionId || !userId) {
+                    throw new Error('Missing session or user information');
+                }
+
+                const stack = await startupStackPromise;
+
+                // Update subscription status in database
+                const { error } = await stack.supabase
+                    .from('users')
+                    .update({ subscription_status: 'active' })
+                    .eq('id', userId);
+
+                if (error) throw error;
+
+                // Store subscription info
+                localStorage.setItem('subscriptionActive', 'true');
+                localStorage.setItem('sessionId', sessionId);
+
+                // Redirect to dashboard
+                window.location.replace('/dashboard.html');
+            } catch (error) {
+                console.error('Activation error:', error);
+                window.location.replace('/?error=activation');
+            }
+        }
+
+        // Run activation when page loads
+        document.addEventListener('DOMContentLoaded', activateSubscription);
+    </script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center">
+    <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+        <h1 class="text-2xl font-bold mb-4">Activating Your Subscription</h1>
+        <p class="text-gray-400">Please wait while we set up your account...</p>
+    </div>
+</body>
+</html>

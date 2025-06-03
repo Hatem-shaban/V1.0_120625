@@ -30,8 +30,8 @@ exports.handler = async (event, context) => {
         price: process.env.STRIPE_PRICE_ID,
         quantity: 1,
       }],
-      success_url: `${process.env.URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.URL}/cancel`,
+      success_url: `${process.env.URL}/success.html?session_id={CHECKOUT_SESSION_ID}&userId={CHECKOUT_SESSION_METADATA_USER_ID}`,
+      cancel_url: `${process.env.URL}?checkout=cancelled`,
       customer_email: customerEmail,
       metadata: {
         userId: userId

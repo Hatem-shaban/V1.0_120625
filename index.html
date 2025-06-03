@@ -539,33 +539,31 @@
                 localStorage.setItem('userId', user.id);
                 localStorage.setItem('userEmail', email);
 
-                // Only redirect to checkout if subscription is not active
-                if (user.subscription_status !== 'active') {
-                    // Create checkout session
-                    const response = await fetch('/.netlify/functions/create-checkout-session', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            customerEmail: email,
-                            userId: user.id 
-                        })
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Failed to create checkout session');
-                    }
-
-                    const { id: sessionId } = await response.json();
-                    await stripe.redirectToCheckout({ sessionId });
-                } else {
-                    // User has active subscription - redirect to dashboard
+                if (user.subscription_status === 'active') {
                     showNotification('Login successful!', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/dashboard.html';
-                    }, 1000);
+                    window.location.replace('/dashboard.html');
+                    return;
                 }
+
+                // Need subscription - create checkout session
+                const response = await fetch('/.netlify/functions/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        customerEmail: email,
+                        userId: user.id 
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create checkout session');
+                }
+
+                const { id: sessionId } = await response.json();
+                await stripe.redirectToCheckout({ sessionId });
+
             } else {
-                // Signup flow - create new user first
+                // Signup flow - create new user
                 const { data: newUser, error } = await window.StartupStack.supabase
                     .from('users')
                     .insert([{
@@ -581,7 +579,7 @@
                 localStorage.setItem('userId', newUser.id);
                 localStorage.setItem('userEmail', email);
                 
-                // Create checkout session for new user
+                // Redirect to checkout
                 const response = await fetch('/.netlify/functions/create-checkout-session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -594,8 +592,7 @@
                 if (!response.ok) throw new Error('Failed to create checkout session');
                 
                 const { id: sessionId } = await response.json();
-                const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
-                if (stripeError) throw stripeError;
+                await stripe.redirectToCheckout({ sessionId });
             }
         } catch (error) {
             console.error('Auth error:', error);
