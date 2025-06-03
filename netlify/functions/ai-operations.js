@@ -1,9 +1,8 @@
-const { Configuration, OpenAIApi } = require('openai');
+const OpenAI = require('openai');
 
-const configuration = new Configuration({
+const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
-const openai = new OpenAIApi(configuration);
 
 exports.handler = async function(event, context) {
     if (event.httpMethod !== 'POST') {
@@ -37,15 +36,16 @@ exports.handler = async function(event, context) {
             body: JSON.stringify({ error: error.message })
         };
     }
-}
 
-async function generateBusinessNames({ industry, keywords }) {
-    const prompt = `Generate 10 creative, brandable business names for a ${industry} company. Keywords: ${keywords}. Format as JSON array.`;
-    
-    const completion = await openai.createChatCompletion({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: prompt }],
-    });
+    async function generateBusinessNames({ industry, keywords }) {
+        const completion = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [{ 
+                role: "user", 
+                content: `Generate 10 creative, brandable business names for a ${industry} company. Keywords: ${keywords}. Format as JSON array.`
+            }],
+        });
 
-    return completion.data.choices[0].message.content;
+        return completion.choices[0].message.content;
+    }
 }
