@@ -7,61 +7,36 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 // AI Tool Functions
 class StartupStackAI {
-    constructor() {
-        // Use environment variable instead of hardcoded key
-        this.openaiKey = process.env.OPENAI_API_KEY;
-        if (!this.openaiKey) {
-            console.error('OpenAI API key not found in environment variables');
-            throw new Error('OpenAI API key not configured');
-        }
-    }
-
-    async callOpenAI(prompt) {
+    async callAIOperation(operation, params) {
         try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            const response = await fetch('/.netlify/functions/ai-operations', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${this.openaiKey}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [{ role: 'user', content: prompt }],
-                    max_tokens: 500,
-                    temperature: 0.7,
-                    top_p: 1,
-                    frequency_penalty: 0,
-                    presence_penalty: 0
+                    operation,
+                    params
                 })
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                console.error('OpenAI API Response:', data);
-                throw new Error(data.error?.message || 'OpenAI API error');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            if (!data.choices?.[0]?.message?.content) {
-                console.error('Unexpected API response format:', data);
-                throw new Error('Invalid response format from OpenAI');
-            }
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+            return data;
 
-            return data.choices[0].message.content;
         } catch (error) {
-            console.error('OpenAI API error:', error);
-            // Add user-friendly error message
-            const errorMessage = error.message.includes('API key') ? 
-                'Invalid API key configuration' : 
-                'AI service temporarily unavailable';
-            throw new Error(errorMessage);
+            console.error('AI operation error:', error);
+            throw error;
         }
     }
 
-    // Business Name Generator
+    // Update the AI tool methods to use the secure function
     async generateBusinessNames(industry, keywords) {
-        const prompt = `Generate 10 creative, brandable business names for a ${industry} company. Keywords: ${keywords}. Format as JSON array.`;
-        return this.callOpenAI(prompt);
+        return this.callAIOperation('generateBusinessNames', { industry, keywords });
     }
 
     // Logo Creator
