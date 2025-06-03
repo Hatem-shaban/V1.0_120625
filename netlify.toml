@@ -9,34 +9,18 @@
 
 [build.environment]
   NODE_VERSION = "18"
-
-[dev]
-  command = "netlify dev"
-  targetPort = 8888
-  publish = "."
-  
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-  force = true
-  [redirects.headers]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type"
-
-[[redirects]]
-  from = "/dashboard"
-  to = "/dashboard.html"
-  status = 200
-
-[dev]
-  functions = "netlify/functions"
-  publish = "."
+  SUPABASE_URL = ""
+  SUPABASE_ANON_KEY = ""
+  STRIPE_PUBLIC_KEY = ""
+  STRIPE_SECRET_KEY = ""
+  STRIPE_PRICE_ID = ""
 
 [[headers]]
   for = "/*"
-    [headers.values]
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"
     Content-Security-Policy = """
       default-src 'self';
       script-src 'self' 'unsafe-inline' https://*.stripe.com https://*.stripe.network https://cdn.jsdelivr.net https://esm.sh https://cdnjs.cloudflare.com;
@@ -47,6 +31,18 @@
       font-src 'self' https://cdnjs.cloudflare.com;
       worker-src 'self' blob:;
     """
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+  [redirects.headers]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type"
