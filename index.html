@@ -608,7 +608,7 @@ async function createCheckoutSession(email, userId) {
                     throw new Error('Email already exists. Please log in.');
                 }
 
-                // Create new user with better error handling
+                // Create new user with only existing columns
                 const { data: newUser, error: createError } = await window.StartupStack.supabase
                     .from('users')
                     .insert([{
@@ -630,6 +630,7 @@ async function createCheckoutSession(email, userId) {
                     throw new Error('Failed to create account. Please try again.');
                 }
 
+                // Store user data in localStorage
                 localStorage.setItem('userId', newUser.id);
                 localStorage.setItem('userEmail', email);
 
