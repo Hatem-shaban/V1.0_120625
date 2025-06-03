@@ -513,6 +513,39 @@
         document.getElementById('authSubmitBtn').textContent = isLoginMode ? 'Log In' : 'Create Account';
     }
 
+    // Error messages
+const ERROR_MESSAGES = {
+    USER_NOT_FOUND: 'User not found. Please sign up.',
+    EMAIL_EXISTS: 'Email already exists. Please log in.',
+    CHECKOUT_FAILED: 'Failed to start checkout process. Please try again.',
+    CREATE_USER_FAILED: 'Failed to create account. Please try again.',
+    INVALID_RESPONSE: 'Invalid server response. Please try again.'
+};
+
+async function createCheckoutSession(email, userId) {
+    const response = await fetch('/.netlify/functions/create-checkout-session', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ customerEmail: email, userId })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Checkout error:', errorData);
+        throw new Error(errorData.error || ERROR_MESSAGES.CHECKOUT_FAILED);
+    }
+
+    const data = await response.json();
+    if (!data.id) {
+        throw new Error(ERROR_MESSAGES.INVALID_RESPONSE);
+    }
+
+    return data.id;
+}
+
     document.getElementById('authForm').addEventListener('submit', async (event) => {
         event.preventDefault();
         const email = document.getElementById('email').value;
@@ -522,15 +555,21 @@
             submitButton.disabled = true;
             submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
+            // Initialize StartupStack if needed
+            if (!window.StartupStack?.initialized) {
+                await initializeApp();
+            }
+
             if (isLoginMode) {
-                // Login flow
-                const { data: user, error } = await window.StartupStack.supabase
+                // Login flow with better error handling
+                const { data: user, error: loginError } = await window.StartupStack.supabase
                     .from('users')
                     .select('*')
                     .eq('email', email)
                     .single();
 
-                if (error || !user) {
+                if (loginError) {
+                    console.error('Login error:', loginError);
                     throw new Error('User not found. Please sign up.');
                 }
 
@@ -538,86 +577,70 @@
                 localStorage.setItem('userId', user.id);
                 localStorage.setItem('userEmail', email);
 
+                // Check subscription status
                 if (user.subscription_status === 'active') {
                     showNotification('Login successful!', 'success');
                     window.location.replace('/dashboard.html');
                     return;
                 }
 
-                // Create checkout session for existing user
-                const response = await fetch('/.netlify/functions/create-checkout-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        customerEmail: email,
-                        userId: user.id 
-                    })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to create checkout session');
+                // Create checkout session with better error handling
+                try {
+                    const sessionId = await createCheckoutSession(email, user.id);
+                    await stripe.redirectToCheckout({ sessionId });
+                } catch (checkoutError) {
+                    console.error('Checkout error:', checkoutError);
+                    throw new Error('Failed to start checkout process. Please try again.');
                 }
 
-                const { id: sessionId } = await response.json();
-                const stripe = Stripe(STRIPE_PUBLIC_KEY);
-                await stripe.redirectToCheckout({ sessionId });
-
             } else {
-                // Check for existing user first
+                // Signup flow with duplicate check
                 const { data: existingUser } = await window.StartupStack.supabase
                     .from('users')
                     .select('id, email')
                     .eq('email', email)
-                    .single();
+                    .maybeSingle();
 
                 if (existingUser) {
                     isLoginMode = true;
                     document.getElementById('authTitle').textContent = 'Log In';
+                    document.getElementById('authSubmitBtn').textContent = 'Log In';
                     throw new Error('Email already exists. Please log in.');
                 }
 
-                // Create new user
-                const { data: newUser, error } = await window.StartupStack.supabase
+                // Create new user with better error handling
+                const { data: newUser, error: createError } = await window.StartupStack.supabase
                     .from('users')
                     .insert([{
                         email: email,
                         created_at: new Date().toISOString(),
-                        subscription_status: 'pending'
+                        subscription_status: 'pending',
+                        last_login: new Date().toISOString()
                     }])
                     .select()
                     .single();
 
-                if (error) {
-                    if (error.code === '23505') { // Duplicate key error
+                if (createError) {
+                    console.error('User creation error:', createError);
+                    if (createError.code === '23505') {
                         isLoginMode = true;
                         document.getElementById('authTitle').textContent = 'Log In';
                         throw new Error('Email already exists. Please log in.');
                     }
-                    throw error;
+                    throw new Error('Failed to create account. Please try again.');
                 }
 
                 localStorage.setItem('userId', newUser.id);
                 localStorage.setItem('userEmail', email);
 
                 // Create checkout session for new user
-                const response = await fetch('/.netlify/functions/create-checkout-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        customerEmail: email,
-                        userId: newUser.id 
-                    })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to create checkout session');
+                try {
+                    const sessionId = await createCheckoutSession(email, newUser.id);
+                    await stripe.redirectToCheckout({ sessionId });
+                } catch (checkoutError) {
+                    console.error('Checkout error:', checkoutError);
+                    throw new Error('Failed to start checkout process. Please try again.');
                 }
-
-                const { id: sessionId } = await response.json();
-                const stripe = Stripe(STRIPE_PUBLIC_KEY);
-                await stripe.redirectToCheckout({ sessionId });
             }
         } catch (error) {
             console.error('Auth error:', error);
