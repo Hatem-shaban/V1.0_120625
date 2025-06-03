@@ -1,9 +1,11 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
 
+// Initialize Supabase client
 const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
+    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
 );
 
 exports.handler = async (event, context) => {
@@ -44,7 +46,7 @@ exports.handler = async (event, context) => {
             }
         });
 
-        // Pre-update the user's status to pending_activation
+        // Update user with pending status
         const { error: updateError } = await supabase
             .from('users')
             .update({ 
@@ -55,21 +57,17 @@ exports.handler = async (event, context) => {
             .eq('id', userId);
 
         if (updateError) {
-            console.error('Error updating user status:', updateError);
-            throw new Error('Failed to update user status');
+            console.error('Error updating user:', updateError);
         }
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ 
-                id: session.id,
-                userId: userId
-            })
+            body: JSON.stringify({ id: session.id })
         };
 
     } catch (error) {
-        console.error('Create checkout session error:', error);
+        console.error('Checkout error:', error);
         return {
             statusCode: 500,
             headers,
