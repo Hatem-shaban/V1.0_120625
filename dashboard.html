@@ -11,8 +11,17 @@
 <body class="bg-gray-900 text-white">
     <div class="min-h-screen">
         <nav class="bg-gray-800 p-4">
-            <div class="max-w-7xl mx-auto px-4">
+            <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
                 <h1 class="text-2xl font-bold">StartupStack Dashboard</h1>
+                
+                <!-- Add Profile/Logout Section -->
+                <div class="flex items-center space-x-4">
+                    <span id="userEmail" class="text-gray-300"></span>
+                    <button onclick="handleLogout()" 
+                            class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </button>
+                </div>
             </div>
         </nav>
 
@@ -102,7 +111,8 @@
     </div>
 
     <script>
-    (function checkAuth() {
+    // Update the auth check function
+    async function checkAuth() {
         const userId = localStorage.getItem('userId');
         const userEmail = localStorage.getItem('userEmail');
         
@@ -110,26 +120,39 @@
             window.location.href = '/?auth=required';
             return;
         }
+
+        // Display user email
+        document.getElementById('userEmail').textContent = userEmail;
         
-        // Verify user exists in Supabase
-        window.StartupStack?.supabase
-            .from('users')
-            .select('id, subscription_status')
-            .eq('id', userId)
-            .single()
-            .then(({ data, error }) => {
-                if (error || !data) {
-                    localStorage.removeItem('userId');
-                    localStorage.removeItem('userEmail');
-                    window.location.href = '/?auth=invalid';
-                    return;
-                }
-                
-                if (data.subscription_status !== 'active') {
-                    window.location.href = '/?subscription=required';
-                }
-            });
-    })();
+        try {
+            const { data, error } = await window.StartupStack?.supabase
+                .from('users')
+                .select('id, subscription_status')
+                .eq('id', userId)
+                .single();
+
+            if (error || !data) {
+                handleLogout();
+                return;
+            }
+            
+            if (data.subscription_status !== 'active') {
+                window.location.href = '/?subscription=required';
+            }
+        } catch (error) {
+            console.error('Auth check error:', error);
+            handleLogout();
+        }
+    }
+
+    function handleLogout() {
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userEmail');
+        window.location.href = '/?logout=success';
+    }
+
+    // Call checkAuth when page loads
+    checkAuth();
     </script>
 </body>
 </html>

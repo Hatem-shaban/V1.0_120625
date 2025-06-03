@@ -27,58 +27,43 @@ class StartupStackAI {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
             return data;
-
         } catch (error) {
             console.error('AI operation error:', error);
             throw error;
         }
     }
 
-    // Update the AI tool methods to use the secure function
+    // Update all AI tool methods to use callAIOperation
     async generateBusinessNames(industry, keywords) {
         return this.callAIOperation('generateBusinessNames', { industry, keywords });
     }
 
-    // Logo Creator
     async generateLogo(style, industry) {
-        const prompt = `Design a logo concept for a ${industry} company. Style: ${style}. Describe the design elements, colors, and typography in detail.`;
-        return this.callOpenAI(prompt);
+        return this.callAIOperation('generateLogo', { style, industry });
     }
 
-    // Pitch Deck Generator
     async generatePitchDeck(type, industry) {
-        const prompt = `Create an outline for a ${type} pitch deck in the ${industry} industry. Include key sections and content recommendations.`;
-        return this.callOpenAI(prompt);
+        return this.callAIOperation('generatePitchDeck', { type, industry });
     }
 
-    // Market Research
     async analyzeMarket(industry, region) {
-        const prompt = `Analyze the ${industry} market in ${region}. Include market size, key competitors, trends, and opportunities.`;
-        return this.callOpenAI(prompt);
+        return this.callAIOperation('analyzeMarket', { industry, region });
     }
 
-    // Content Calendar
     async generateContentCalendar(business, audience) {
-        const prompt = `Create a 30-day social media content calendar for a ${business} targeting ${audience}. Include post types, topics, and hashtags.`;
-        return this.callOpenAI(prompt);
+        return this.callAIOperation('generateContentCalendar', { business, audience });
     }
 
-    // Email Templates
     async generateEmailTemplates(business, sequence) {
-        const prompt = `Generate email templates for a ${sequence} sequence for a ${business}. Include subject lines and body copy.`;
-        return this.callOpenAI(prompt);
+        return this.callAIOperation('generateEmailTemplates', { business, sequence });
     }
 
-    // Legal Documents
     async generateLegalDocs(business, docType) {
-        const prompt = `Create a ${docType} template for a ${business}. Include standard clauses and customization points.`;
-        return this.callOpenAI(prompt);
+        return this.callAIOperation('generateLegalDocs', { business, docType });
     }
 
-    // Financial Projections
     async generateFinancials(business, timeframe) {
-        const prompt = `Generate ${timeframe} financial projections template for a ${business}. Include revenue streams, costs, and growth assumptions.`;
-        return this.callOpenAI(prompt);
+        return this.callAIOperation('generateFinancials', { business, timeframe });
     }
 }
 
