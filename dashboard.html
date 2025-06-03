@@ -118,42 +118,52 @@
 
     async function checkAuth() {
         try {
-            // Wait for StartupStack to initialize
-            const stack = await startupStackPromise;
-            
             const userId = localStorage.getItem('userId');
             const userEmail = localStorage.getItem('userEmail');
-            
+
             if (!userId || !userEmail) {
                 window.location.href = '/?auth=required';
                 return;
             }
 
-            // Display user email
-            document.getElementById('userEmail').textContent = userEmail;
+            // Wait for StartupStack to initialize
+            const stack = await startupStackPromise;
             
-            // Check user status in Supabase
-            const { data, error } = await stack.supabase
+            // Display user email while checking
+            document.getElementById('userEmail').textContent = userEmail;
+
+            // Verify user and subscription status
+            const { data: user, error } = await stack.supabase
                 .from('users')
-                .select('id, subscription_status')
+                .select('id, email, subscription_status')
                 .eq('id', userId)
                 .single();
 
-            if (error || !data) {
-                console.error('User verification error:', error);
+            if (error || !user) {
+                console.error('User verification failed:', error);
                 handleLogout();
                 return;
             }
-            
-            if (data.subscription_status !== 'active') {
+
+            // Verify email matches
+            if (user.email !== userEmail) {
+                console.error('Session mismatch');
+                handleLogout();
+                return;
+            }
+
+            // Check subscription
+            if (user.subscription_status !== 'active') {
                 window.location.href = '/?subscription=required';
                 return;
             }
 
-            // Enable AI tool buttons after auth check
+            // Enable AI tool buttons
             document.querySelectorAll('[data-ai-tool]').forEach(button => {
                 button.disabled = false;
             });
+
+            console.log('Auth check passed, user verified');
 
         } catch (error) {
             console.error('Auth check error:', error);
@@ -164,13 +174,13 @@
     function handleLogout() {
         localStorage.removeItem('userId');
         localStorage.removeItem('userEmail');
-        window.location.href = '/?logout=success';
+        window.location.href = '/?auth=required';
     }
 
     // Make handleLogout available globally
     window.handleLogout = handleLogout;
 
-    // Run auth check when page loads
+    // Wait for DOM and run auth check
     document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>
