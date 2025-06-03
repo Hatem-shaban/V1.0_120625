@@ -67,68 +67,18 @@ class StartupStackAI {
     }
 }
 
-// User Management
-class UserManager {
-    async signUp(email) {
-        try {
-            // Check if user exists
-            const { data: existingUser, error: selectError } = await supabase
-                .from('users')
-                .select('id, email')
-                .eq('email', email)
-                .single();
-
-            if (selectError && selectError.code !== 'PGRST116') {
-                console.error('Error checking existing user:', selectError);
-                throw selectError;
-            }
-
-            if (existingUser) {
-                return existingUser;
-            }
-
-            // Insert new user
-            const { data: newUser, error: insertError } = await supabase
-                .from('users')
-                .insert([{
-                    email: email,
-                    created_at: new Date().toISOString(),
-                    subscription_status: 'pending'
-                }])
-                .select()
-                .single();
-
-            if (insertError) {
-                console.error('Error creating user:', insertError);
-                throw insertError;
-            }
-
-            return newUser;
-        } catch (error) {
-            console.error('Error in signUp:', error);
-            throw error;
-        }
-    }
-}
-
 // Initialize and export
 async function initializeStartupStack() {
     try {
-        // Create instances
         const aiTools = new StartupStackAI();
-        const userManager = new UserManager();
-
-        // Create the stack object
+        
         const stack = {
             aiTools,
-            userManager,
             supabase,
             initialized: true
         };
 
-        // Make it globally available
         window.StartupStack = stack;
-
         console.log('StartupStack initialized successfully');
         return stack;
     } catch (error) {
