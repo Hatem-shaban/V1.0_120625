@@ -120,22 +120,22 @@
         try {
             const userId = localStorage.getItem('userId');
             const userEmail = localStorage.getItem('userEmail');
-
+            
             if (!userId || !userEmail) {
-                window.location.href = '/?auth=required';
+                window.location.replace('/?auth=required');
                 return;
             }
 
             // Wait for StartupStack to initialize
             const stack = await startupStackPromise;
             
-            // Display user email while checking
+            // Display user email immediately
             document.getElementById('userEmail').textContent = userEmail;
 
-            // Verify user and subscription status
+            // Check user status
             const { data: user, error } = await stack.supabase
                 .from('users')
-                .select('id, email, subscription_status')
+                .select('*')
                 .eq('id', userId)
                 .single();
 
@@ -145,25 +145,19 @@
                 return;
             }
 
-            // Verify email matches
-            if (user.email !== userEmail) {
-                console.error('Session mismatch');
-                handleLogout();
-                return;
-            }
-
-            // Check subscription
             if (user.subscription_status !== 'active') {
-                window.location.href = '/?subscription=required';
+                localStorage.removeItem('subscriptionActive');
+                window.location.replace('/?subscription=required');
                 return;
             }
 
-            // Enable AI tool buttons
+            // Mark subscription as active
+            localStorage.setItem('subscriptionActive', 'true');
+
+            // Enable AI tools
             document.querySelectorAll('[data-ai-tool]').forEach(button => {
                 button.disabled = false;
             });
-
-            console.log('Auth check passed, user verified');
 
         } catch (error) {
             console.error('Auth check error:', error);
@@ -172,15 +166,13 @@
     }
 
     function handleLogout() {
-        localStorage.removeItem('userId');
-        localStorage.removeItem('userEmail');
-        window.location.href = '/?auth=required';
+        localStorage.clear();
+        window.location.replace('/?auth=required');
     }
 
-    // Make handleLogout available globally
     window.handleLogout = handleLogout;
 
-    // Wait for DOM and run auth check
+    // Run auth check when page loads
     document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>

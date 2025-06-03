@@ -138,6 +138,7 @@
             }
         }
 
+        // Update the payment success handler
         async function handlePaymentSuccess() {
             const urlParams = new URLSearchParams(window.location.search);
             const sessionId = urlParams.get('session_id');
@@ -147,7 +148,14 @@
                     const userId = localStorage.getItem('userId');
                     const email = localStorage.getItem('userEmail');
                     
-                    if (!userId || !email) throw new Error('User session not found');
+                    if (!userId || !email) {
+                        throw new Error('User session not found');
+                    }
+
+                    // Initialize StartupStack if needed
+                    if (!window.StartupStack?.initialized) {
+                        await initializeApp();
+                    }
 
                     // Update user subscription status
                     const { error: updateError } = await window.StartupStack.supabase
@@ -159,17 +167,19 @@
 
                     // Store session data
                     localStorage.setItem('sessionId', sessionId);
+                    localStorage.setItem('subscriptionActive', 'true');
 
-                    // Show success message
+                    // Show success message and redirect
                     showNotification('Subscription activated successfully!', 'success');
-
-                    // Redirect to dashboard
+                    
+                    // Delay redirect to ensure notification is seen
                     setTimeout(() => {
-                        window.location.href = '/dashboard.html';
-                    }, 1500);
+                        window.location.replace('/dashboard.html');
+                    }, 2000);
+
                 } catch (error) {
                     console.error('Payment success handling error:', error);
-                    showNotification('Error activating subscription', 'error');
+                    showNotification('Error activating subscription. Please contact support.', 'error');
                 }
             }
         }
@@ -471,11 +481,6 @@
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-            // Wait for StartupStack to initialize if needed
-            if (!window.StartupStack?.initialized) {
-                await initializeApp();
-            }
-
             if (isLoginMode) {
                 // Login flow
                 const { data: user, error } = await window.StartupStack.supabase
@@ -492,29 +497,31 @@
                 localStorage.setItem('userId', user.id);
                 localStorage.setItem('userEmail', email);
 
-                // Check subscription status
-                if (user.subscription_status === 'active') {
-                    window.location.href = '/dashboard.html';
-                    return;
+                // Only redirect to checkout if subscription is not active
+                if (user.subscription_status !== 'active') {
+                    // Create checkout session
+                    const response = await fetch('/.netlify/functions/create-checkout-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            customerEmail: email,
+                            userId: user.id 
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to create checkout session');
+                    }
+
+                    const { id: sessionId } = await response.json();
+                    await stripe.redirectToCheckout({ sessionId });
+                } else {
+                    // User has active subscription - redirect to dashboard
+                    showNotification('Login successful!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 1000);
                 }
-
-                // Need subscription - create checkout session
-                const response = await fetch('/.netlify/functions/create-checkout-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        customerEmail: email,
-                        userId: user.id 
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to create checkout session');
-                }
-
-                const { id: sessionId } = await response.json();
-                await stripe.redirectToCheckout({ sessionId });
-
             } else {
                 // Signup flow - create new user first
                 const { data: newUser, error } = await window.StartupStack.supabase
