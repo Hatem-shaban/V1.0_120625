@@ -5,6 +5,64 @@ const supabaseUrl = 'https://ygnrdquwnafkbkxirtae.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnbnJkcXV3bmFma2JreGlydGFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNTY3MjMsImV4cCI6MjA2MzczMjcyM30.R1QNPExVxHJ8wQjvkuOxfPH0Gf1KR4HOafaP3flPWaI'
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+// User management class
+class UserManager {
+    constructor(supabase) {
+        this.supabase = supabase;
+    }
+
+    async signUp(email) {
+        try {
+            // Check if user exists
+            const { data: existingUser } = await this.supabase
+                .from('users')
+                .select('*')
+                .eq('email', email)
+                .single();
+
+            if (existingUser) {
+                return existingUser;
+            }
+
+            // Create new user
+            const { data: newUser, error } = await this.supabase
+                .from('users')
+                .insert([{
+                    email: email,
+                    created_at: new Date().toISOString(),
+                    subscription_status: 'pending'
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return newUser;
+
+        } catch (error) {
+            console.error('User signup error:', error);
+            throw error;
+        }
+    }
+
+    async trackToolUsage(userId, toolName, action, result) {
+        try {
+            const { error } = await this.supabase
+                .from('tool_usage')
+                .insert([{
+                    user_id: userId,
+                    tool_name: toolName,
+                    action: action,
+                    result: result,
+                    created_at: new Date().toISOString()
+                }]);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Tool usage tracking error:', error);
+        }
+    }
+}
+
 // AI Tool Functions
 class StartupStackAI {
     async callAIOperation(operation, params) {
@@ -70,10 +128,13 @@ class StartupStackAI {
 // Initialize and export
 async function initializeStartupStack() {
     try {
+        // Create instances
         const aiTools = new StartupStackAI();
+        const userManager = new UserManager(supabase);
         
         const stack = {
             aiTools,
+            userManager,
             supabase,
             initialized: true
         };
