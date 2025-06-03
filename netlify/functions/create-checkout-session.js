@@ -21,10 +21,7 @@ exports.handler = async (event, context) => {
       throw new Error('Method not allowed');
     }
 
-    const data = JSON.parse(event.body);
-    if (!data.customerEmail) {
-      throw new Error('Customer email is required');
-    }
+    const { customerEmail, userId } = JSON.parse(event.body);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -35,20 +32,20 @@ exports.handler = async (event, context) => {
       }],
       success_url: `${process.env.URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.URL}/cancel`,
-      customer_email: data.customerEmail,
+      customer_email: customerEmail,
+      metadata: {
+        userId: userId
+      }
     });
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ 
-        id: session.id,
-        url: session.url 
-      })
+      body: JSON.stringify({ id: session.id })
     };
 
   } catch (error) {
-    console.error('Checkout session error:', error);
+    console.error('Create checkout session error:', error);
     
     return {
       statusCode: 500,

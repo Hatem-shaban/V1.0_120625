@@ -139,39 +139,34 @@
         }
 
         async function handlePaymentSuccess() {
-            // Check if we're on success page
             const urlParams = new URLSearchParams(window.location.search);
             const sessionId = urlParams.get('session_id');
             
             if (sessionId) {
                 try {
+                    const userId = localStorage.getItem('userId');
                     const email = localStorage.getItem('userEmail');
-                    if (!email) throw new Error('User email not found');
-
-                    // Get user data
-                    const { data: userData, error: userError } = await window.StartupStack.supabase
-                        .from('users')
-                        .select('*')
-                        .eq('email', email)
-                        .single();
-
-                    if (userError) throw userError;
+                    
+                    if (!userId || !email) throw new Error('User session not found');
 
                     // Update user subscription status
-                    await window.StartupStack.supabase
+                    const { error: updateError } = await window.StartupStack.supabase
                         .from('users')
                         .update({ subscription_status: 'active' })
-                        .eq('id', userData.id);
+                        .eq('id', userId);
 
-                    // Initialize AI tools
-                    await initializeAITools(userData.id);
+                    if (updateError) throw updateError;
 
                     // Store session data
                     localStorage.setItem('sessionId', sessionId);
-                    localStorage.setItem('userId', userData.id);
+
+                    // Show success message
+                    showNotification('Subscription activated successfully!', 'success');
 
                     // Redirect to dashboard
-                    window.location.href = '/dashboard.html';
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 1500);
                 } catch (error) {
                     console.error('Payment success handling error:', error);
                     showNotification('Error activating subscription', 'error');
@@ -481,6 +476,7 @@
         const email = document.getElementById('email').value;
         const button = event.submitter;
         button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
         try {
             if (isLoginMode) {
@@ -495,37 +491,68 @@
                     throw new Error('User not found. Please sign up.');
                 }
 
-                if (user.subscription_status !== 'active') {
-                    throw new Error('Subscription required. Please complete payment.');
-                }
-
                 localStorage.setItem('userId', user.id);
                 localStorage.setItem('userEmail', email);
-                window.location.href = '/dashboard.html';
+
+                // Check subscription status and redirect accordingly
+                if (user.subscription_status === 'active') {
+                    window.location.href = '/dashboard.html';
+                } else {
+                    // Create checkout session for existing user
+                    const response = await fetch('/.netlify/functions/create-checkout-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            customerEmail: email,
+                            userId: user.id 
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('Failed to create checkout session');
+                    
+                    const { id: sessionId } = await response.json();
+                    const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
+                    if (stripeError) throw stripeError;
+                }
             } else {
-                // Signup flow
-                const user = await window.StartupStack.userManager.signUp(email);
-                localStorage.setItem('userId', user.id);
+                // Signup flow - create new user first
+                const { data: newUser, error } = await window.StartupStack.supabase
+                    .from('users')
+                    .insert([{
+                        email: email,
+                        created_at: new Date().toISOString(),
+                        subscription_status: 'pending'
+                    }])
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                localStorage.setItem('userId', newUser.id);
                 localStorage.setItem('userEmail', email);
                 
-                // Create checkout session
+                // Create checkout session for new user
                 const response = await fetch('/.netlify/functions/create-checkout-session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ customerEmail: email })
+                    body: JSON.stringify({ 
+                        customerEmail: email,
+                        userId: newUser.id 
+                    })
                 });
 
                 if (!response.ok) throw new Error('Failed to create checkout session');
                 
                 const { id: sessionId } = await response.json();
-                const { error } = await stripe.redirectToCheckout({ sessionId });
-                if (error) throw error;
+                const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
+                if (stripeError) throw stripeError;
             }
         } catch (error) {
             console.error('Auth error:', error);
             showNotification(error.message, 'error');
         } finally {
             button.disabled = false;
+            button.innerHTML = isLoginMode ? 'Log In' : 'Create Account';
         }
     });
 </script>
