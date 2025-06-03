@@ -5,11 +5,16 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["@supabase/supabase-js"]
+  external_node_modules = ["@supabase/supabase-js", "stripe"]
 
 [build.environment]
   NODE_VERSION = "18"
 
+[dev]
+  command = "netlify dev"
+  targetPort = 8888
+  publish = "."
+  
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
