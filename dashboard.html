@@ -116,64 +116,88 @@
     <script type="module">
     import startupStackPromise from './app.js';
 
+    let authCheckComplete = false;
+
     async function checkAuth() {
         try {
+            // Prevent flashing by adding loading state
+            if (!authCheckComplete) {
+                document.body.style.opacity = '0';
+            }
+
             const userId = localStorage.getItem('userId');
             const userEmail = localStorage.getItem('userEmail');
             
             if (!userId || !userEmail) {
-                window.location.replace('/?auth=required');
+                window.location.href = '/?auth=required';
                 return;
             }
 
-            // Wait for StartupStack to initialize
+            // Initialize StartupStack first
             const stack = await startupStackPromise;
-            
-            // Display user email immediately
-            document.getElementById('userEmail').textContent = userEmail;
+            if (!stack || !stack.supabase) {
+                throw new Error('StartupStack not initialized properly');
+            }
 
-            // Check user status
+            // Verify user and subscription
             const { data: user, error } = await stack.supabase
                 .from('users')
                 .select('*')
                 .eq('id', userId)
+                .eq('email', userEmail)
                 .single();
 
             if (error || !user) {
-                console.error('User verification failed:', error);
-                handleLogout();
-                return;
+                throw new Error('User verification failed');
             }
 
+            // Check subscription status
             if (user.subscription_status !== 'active') {
-                localStorage.removeItem('subscriptionActive');
-                window.location.replace('/?subscription=required');
+                window.location.href = '/?subscription=required';
                 return;
             }
 
-            // Mark subscription as active
-            localStorage.setItem('subscriptionActive', 'true');
-
-            // Enable AI tools
+            // Update UI only after successful verification
+            document.getElementById('userEmail').textContent = userEmail;
             document.querySelectorAll('[data-ai-tool]').forEach(button => {
                 button.disabled = false;
             });
 
+            // Show the dashboard
+            document.body.style.opacity = '1';
+            authCheckComplete = true;
+
         } catch (error) {
             console.error('Auth check error:', error);
-            handleLogout();
+            localStorage.clear();
+            window.location.href = '/?auth=error';
         }
     }
 
-    function handleLogout() {
+    // Global logout handler
+    window.handleLogout = function() {
         localStorage.clear();
-        window.location.replace('/?auth=required');
-    }
+        window.location.href = '/?logout=success';
+    };
 
-    window.handleLogout = handleLogout;
+    // Add loading indicator
+    document.body.insertAdjacentHTML('afterbegin', `
+        <div id="loadingOverlay" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+                <p class="mt-4 text-white">Loading dashboard...</p>
+            </div>
+        </div>
+    `);
 
-    // Run auth check when page loads
-    document.addEventListener('DOMContentLoaded', checkAuth);
+    // Run auth check and remove loading overlay
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            await checkAuth();
+        } finally {
+            document.getElementById('loadingOverlay')?.remove();
+        }
+    });
     </script>
 </body>
 </html>

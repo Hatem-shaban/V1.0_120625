@@ -184,8 +184,50 @@
             }
         }
 
-        // Call handler when page loads
-        document.addEventListener('DOMContentLoaded', handlePaymentSuccess);
+        // Handle Stripe success redirect
+        async function handleStripeSuccess() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionId = urlParams.get('session_id');
+
+            if (sessionId) {
+                try {
+                    const stack = await startupStackPromise;
+                    const userId = localStorage.getItem('userId');
+                    
+                    if (!userId) {
+                        throw new Error('No user session found');
+                    }
+
+                    // Update subscription status
+                    const { error } = await stack.supabase
+                        .from('users')
+                        .update({ subscription_status: 'active' })
+                        .eq('id', userId);
+
+                    if (error) throw error;
+
+                    // Show success message
+                    showNotification('Subscription activated successfully!', 'success');
+                    
+                    // Redirect to dashboard after short delay
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 1500);
+
+                } catch (error) {
+                    console.error('Payment success handling error:', error);
+                    showNotification('Error activating subscription', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/?subscription=error';
+                    }, 1500);
+                }
+            }
+        }
+
+        // Check for success redirect on page load
+        if (window.location.search.includes('session_id')) {
+            handleStripeSuccess();
+        }
     </script>
 </head>
 <body class="bg-gray-900 text-white">
