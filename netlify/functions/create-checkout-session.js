@@ -1,6 +1,5 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
 
 // Initialize Supabase client
 const supabase = createClient(
