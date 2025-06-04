@@ -1,82 +1,78 @@
-const OpenAI = require('openai');
+const { Configuration, OpenAIApi } = require('openai');
 
-const openai = new OpenAI({
+// Validate OpenAI API key
+if (!process.env.OPENAI_API_KEY) {
+    throw new Error('Missing OpenAI API key');
+}
+
+// Initialize OpenAI with error handling
+const configuration = new Configuration({
     apiKey: process.env.OPENAI_API_KEY
 });
+const openai = new OpenAIApi(configuration);
 
-exports.handler = async function(event, context) {
-    // Add CORS headers
+exports.handler = async (event, context) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
     };
 
-    // Handle preflight requests
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers };
     }
 
-    if (event.httpMethod !== 'POST') {
-        return { 
-            statusCode: 405, 
-            headers,
-            body: JSON.stringify({ error: 'Method Not Allowed' })
-        };
-    }
-
     try {
-        const { operation, params } = JSON.parse(event.body);
-        
-        // Validate required parameters
-        if (!operation) {
-            throw new Error('Operation is required');
+        if (event.httpMethod !== 'POST') {
+            throw new Error('Method not allowed');
         }
 
-        let response;
+        const { operation, params } = JSON.parse(event.body);
+
+        if (!operation) {
+            throw new Error('Operation type is required');
+        }
+
+        let prompt;
         switch (operation) {
             case 'generateBusinessNames':
-                response = await generateBusinessNames(params);
+                prompt = `Generate 5 creative business names for a ${params.industry} startup:`;
                 break;
-            case 'generateLogo':
-                response = await generateLogo(params);
+            case 'generateEmailTemplates':
+                prompt = `Write a professional email template for ${params.purpose}:`;
                 break;
             default:
-                throw new Error(`Invalid operation: ${operation}`);
+                throw new Error('Invalid operation type');
+        }
+
+        const response = await openai.createCompletion({
+            model: 'gpt-3.5-turbo-instruct',
+            prompt: prompt,
+            max_tokens: 150,
+            temperature: 0.7
+        });
+
+        if (!response.data.choices || !response.data.choices[0]) {
+            throw new Error('No response from AI service');
         }
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ data: response })
+            body: JSON.stringify({
+                result: response.data.choices[0].text.trim()
+            })
         };
+
     } catch (error) {
-        console.error('AI Operation error:', error);
+        console.error('AI operation error:', error);
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 error: error.message,
-                details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+                details: process.env.NODE_ENV === 'development' ? error : undefined
             })
         };
     }
 };
-
-async function generateBusinessNames({ industry, keywords }) {
-    if (!industry || !keywords) {
-        throw new Error('Industry and keywords are required');
-    }
-
-    const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [{ 
-            role: "user", 
-            content: `Generate 10 creative, brandable business names for a ${industry} company. Keywords: ${keywords}. Format as JSON array.`
-        }],
-        temperature: 0.7,
-        max_tokens: 500
-    });
-
-    return completion.choices[0].message.content;
-}
