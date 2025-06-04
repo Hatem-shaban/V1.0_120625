@@ -1,10 +1,9 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase client
 const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
+    process.env.SUPABASE_SERVICE_KEY
 );
 
 exports.handler = async (event, context) => {
@@ -29,6 +28,18 @@ exports.handler = async (event, context) => {
             throw new Error('Missing required fields');
         }
 
+        // Verify user exists before updating
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', userId)
+            .single();
+
+        if (userError || !user) {
+            console.error('User verification error:', userError);
+            throw new Error('User not found');
+        }
+
         // Create Stripe checkout session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -45,28 +56,33 @@ exports.handler = async (event, context) => {
             }
         });
 
-        // Update user with pending status
+        // Update user status with explicit single row update
         const { error: updateError } = await supabase
             .from('users')
             .update({ 
                 subscription_status: 'pending_activation',
-                stripe_session_id: session.id,
-                updated_at: new Date().toISOString()
+                stripe_session_id: session.id
             })
-            .eq('id', userId);
+            .eq('id', userId)
+            .select()
+            .maybeSingle();
 
         if (updateError) {
-            console.error('Error updating user:', updateError);
+            console.error('Error updating user status:', updateError);
+            throw new Error('Failed to update user status');
         }
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ id: session.id })
+            body: JSON.stringify({ 
+                id: session.id,
+                userId: userId
+            })
         };
 
     } catch (error) {
-        console.error('Checkout error:', error);
+        console.error('Create checkout session error:', error);
         return {
             statusCode: 500,
             headers,
