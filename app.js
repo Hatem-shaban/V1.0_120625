@@ -78,16 +78,20 @@ class StartupStackAI {
                 })
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
             }
 
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
-            return data;
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            return data.result;
         } catch (error) {
             console.error('AI operation error:', error);
-            throw error;
+            throw new Error(`AI Operation failed: ${error.message}`);
         }
     }
 

@@ -33,45 +33,53 @@ exports.handler = async (event, context) => {
             throw new Error('Operation type is required');
         }
 
-        let prompt;
+        let systemPrompt;
+        let userPrompt;
+        
         switch (operation) {
             case 'generateBusinessNames':
-                prompt = `Generate 5 creative business names for a ${params.industry} startup:`;
+                systemPrompt = "You are a creative business naming expert.";
+                userPrompt = `Generate 5 creative and unique business names for a ${params.industry} startup. Consider these keywords: ${params.keywords}. Format the response as a numbered list.`;
                 break;
             case 'generateEmailTemplates':
-                prompt = `Write a professional email template for ${params.purpose}:`;
+                systemPrompt = "You are a professional email writing expert.";
+                userPrompt = `Write a professional email template for ${params.purpose}. Include subject line and body.`;
                 break;
             default:
                 throw new Error('Invalid operation type');
         }
 
-        const response = await openai.createCompletion({
-            model: 'gpt-3.5-turbo-instruct',
-            prompt: prompt,
-            max_tokens: 150,
-            temperature: 0.7
+        const completion = await openai.createChatCompletion({
+            model: "gpt-3.5-turbo",
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 500
         });
 
-        if (!response.data.choices || !response.data.choices[0]) {
-            throw new Error('No response from AI service');
+        if (!completion.data || !completion.data.choices || completion.data.choices.length === 0) {
+            throw new Error('No response from OpenAI API');
         }
 
         return {
             statusCode: 200,
             headers,
             body: JSON.stringify({
-                result: response.data.choices[0].text.trim()
+                result: completion.data.choices[0].message.content.trim()
             })
         };
 
     } catch (error) {
-        console.error('AI operation error:', error);
+        console.error('Error in AI operation:', error);
+        
         return {
-            statusCode: 500,
+            statusCode: error.response?.status || 500,
             headers,
             body: JSON.stringify({
-                error: error.message,
-                details: process.env.NODE_ENV === 'development' ? error : undefined
+                error: error.message || 'Internal server error',
+                details: error.response?.data || null
             })
         };
     }
