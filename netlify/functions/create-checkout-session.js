@@ -1,9 +1,20 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
 
+// Validate environment variables
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    throw new Error('Missing Supabase configuration');
+}
+
+// Initialize Supabase with proper error handling
 const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
+    process.env.SUPABASE_ANON_KEY,
+    {
+        auth: {
+            persistSession: false
+        }
+    }
 );
 
 exports.handler = async (event, context) => {
@@ -28,16 +39,21 @@ exports.handler = async (event, context) => {
             throw new Error('Missing required fields');
         }
 
-        // Verify user exists before updating
-        const { data: user, error: userError } = await supabase
+        // First verify the user exists
+        const { data: existingUser, error: userError } = await supabase
             .from('users')
-            .select('id')
+            .select('id, email, subscription_status')
             .eq('id', userId)
+            .eq('email', customerEmail)
             .single();
 
-        if (userError || !user) {
+        if (userError) {
             console.error('User verification error:', userError);
-            throw new Error('User not found');
+            return {
+                statusCode: 404,
+                headers,
+                body: JSON.stringify({ error: 'User not found' })
+            };
         }
 
         // Create Stripe checkout session
@@ -48,7 +64,7 @@ exports.handler = async (event, context) => {
                 price: process.env.STRIPE_PRICE_ID,
                 quantity: 1,
             }],
-            success_url: `${process.env.URL}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${process.env.URL}/success.html?session_id={CHECKOUT_SESSION_ID}&userId=${userId}`,
             cancel_url: `${process.env.URL}?checkout=cancelled`,
             customer_email: customerEmail,
             metadata: {
@@ -56,16 +72,14 @@ exports.handler = async (event, context) => {
             }
         });
 
-        // Update user status with explicit single row update
+        // Update user status without returning data
         const { error: updateError } = await supabase
             .from('users')
             .update({ 
                 subscription_status: 'pending_activation',
                 stripe_session_id: session.id
             })
-            .eq('id', userId)
-            .select()
-            .maybeSingle();
+            .eq('id', userId);
 
         if (updateError) {
             console.error('Error updating user status:', updateError);
@@ -84,7 +98,7 @@ exports.handler = async (event, context) => {
     } catch (error) {
         console.error('Create checkout session error:', error);
         return {
-            statusCode: 500,
+            statusCode: error.statusCode || 500,
             headers,
             body: JSON.stringify({ 
                 error: error.message,
