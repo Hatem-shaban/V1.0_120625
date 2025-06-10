@@ -472,24 +472,28 @@
                 showNotification('Welcome email will be sent shortly.', 'info');
                 return false;
             }
-        }
-
-        async function sendTrialEndingEmail(userEmail) {
-            const templateParams = {
-                to_email: userEmail,
-                from_name: 'StartupStack',
-                subject: 'Your StartupStack trial ends in 3 days',
-                message: `Your StartupStack free trial ends in 3 days. 
-                         Upgrade now to keep access to all your AI tools: 
-                         ${window.location.origin}/upgrade`
-            };
-
+        }        async function sendTrialEndingEmail(userEmail, userName = 'Valued Customer') {
             try {
-                const response = await emailjs.send('service_853d4hu', 'trial_ending', templateParams);
-                console.log('Trial ending email sent successfully:', response);
+                const response = await fetch('/.netlify/functions/send-trial-ending-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: userEmail,
+                        userName: userName
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to send trial ending email');
+                }
+
+                showNotification('Trial ending reminder sent', 'success');
                 return true;
             } catch (error) {
                 console.error('Failed to send trial ending email:', error);
+                showNotification('Failed to send trial ending reminder', 'error');
                 return false;
             }
         }
