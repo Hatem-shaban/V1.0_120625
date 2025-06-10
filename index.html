@@ -480,7 +480,7 @@
                 console.log('Sending welcome email with EmailJS...');
                 const response = await emailjs.send(
                     'service_853d4hu',
-                    'startup_welcome',  // Using the correct template ID
+                    'startup_welcome',
                     templateParams
                 );
                 console.log('Welcome email sent successfully:', response);
@@ -488,25 +488,8 @@
                 return true;
             } catch (error) {
                 console.error('Failed to send welcome email:', error);
-                showNotification('Welcome email will be sent shortly.', 'info');
-                
-                // Retry once after a short delay
-                try {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    console.log('Retrying welcome email...');
-                    const response = await emailjs.send(
-                        'service_853d4hu',
-                        'startup_welcome',  // Using the correct template ID
-                        templateParams
-                    );
-                    console.log('Welcome email sent on retry:', response);
-                    showNotification('Welcome email sent! Check your inbox.', 'success');
-                    return true;
-                } catch (retryError) {
-                    console.error('Failed to send welcome email on retry:', retryError);
-                    showNotification('Welcome email delayed. Check your inbox in a few minutes.', 'warning');
-                    return false;
-                }
+                showNotification('Failed to send welcome email. Please contact support.', 'error');
+                return false;
             }
         }
 
