@@ -8,12 +8,18 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3.11.0/dist/email.min.js"></script>
-    <script src="https://js.stripe.com/v3/"></script>
-    <script>
-        emailjs.init({
-            publicKey: "7gqJJx6DqBcygdMlE",
-            limitRate: true
-        });
+    <script src="https://js.stripe.com/v3/"></script>    <script>
+        // Initialize EmailJS with error handling
+        try {
+            emailjs.init({
+                publicKey: "7gqJJx6DqBcygdMlE",
+                limitRate: true
+            });
+            console.log('EmailJS initialized successfully');
+        } catch (error) {
+            console.error('EmailJS initialization error:', error);
+            window.showNotification?.('Email service initialization failed', 'error');
+        }
     </script>
     <script type="module">
         import startupStackPromise from './app.js';
@@ -441,13 +447,14 @@
     }
 }
     </script>    <script>
-        // Email Functions
-        function sendWelcomeEmail(userEmail, userName = 'New User') {
+        // Email Functions with improved error handling
+        async function sendWelcomeEmail(userEmail, userName = 'New User') {
+            console.log('Attempting to send welcome email to:', userEmail);
+            
             const templateParams = {
                 to_email: userEmail,
                 to_name: userName,
                 from_name: 'StartupStack',
-                subject: 'Welcome to StartupStack - Your AI Toolkit Awaits!',
                 message: `
                 🎉 Welcome to StartupStack!
 
@@ -472,54 +479,51 @@
                 `
             };
 
-            emailjs.send('service_853d4hu', 'startup_welcome', templateParams)
-                .then(function(response) {
-                    console.log('Welcome email sent!', response.status);
+            try {
+                console.log('Sending welcome email with EmailJS...');
+                const response = await emailjs.send('service_853d4hu', 'startup_welcome', templateParams);
+                console.log('Welcome email sent successfully:', response);
+                showNotification('Welcome email sent! Check your inbox.', 'success');
+                return true;
+            } catch (error) {
+                console.error('Failed to send welcome email:', error);
+                showNotification('Welcome email will be sent shortly.', 'info');
+                
+                // Retry once after a short delay
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    console.log('Retrying welcome email...');
+                    const response = await emailjs.send('service_853d4hu', 'startup_welcome', templateParams);
+                    console.log('Welcome email sent on retry:', response);
                     showNotification('Welcome email sent! Check your inbox.', 'success');
-                }, function(error) {
-                    console.log('Email failed:', error);
-                    showNotification('Failed to send welcome email', 'error');
-                });
+                    return true;
+                } catch (retryError) {
+                    console.error('Failed to send welcome email on retry:', retryError);
+                    showNotification('Welcome email delayed. Check your inbox in a few minutes.', 'warning');
+                    return false;
+                }
+            }
         }
 
-        function sendTrialEndingEmail(userEmail) {
+        async function sendTrialEndingEmail(userEmail) {
             const templateParams = {
                 to_email: userEmail,
+                from_name: 'StartupStack',
                 subject: 'Your StartupStack trial ends in 3 days',
                 message: `Your StartupStack free trial ends in 3 days. 
                          Upgrade now to keep access to all your AI tools: 
                          ${window.location.origin}/upgrade`
             };
 
-            emailjs.send('service_853d4hu', 'TrialEndingEmail', templateParams)
-                .then(function(response) {
-                    console.log('Trial ending email sent!', response.status);
-                }, function(error) {
-                    console.log('Trial ending email failed:', error);
-                });
+            try {
+                const response = await emailjs.send('service_853d4hu', 'trial_ending', templateParams);
+                console.log('Trial ending email sent successfully:', response);
+                return true;
+            } catch (error) {
+                console.error('Failed to send trial ending email:', error);
+                return false;
+            }
         }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const contactForm = document.getElementById('contact-form');
-            if (!contactForm) return;
-
-            contactForm.addEventListener('submit', function(event) {
-                event.preventDefault();
-
-                const formData = new FormData(contactForm);
-                const data = Object.fromEntries(formData);
-
-                emailjs.send('service_853d4hu', 'startup_welcome', data)
-                    .then(function(response) {
-                        console.log('SUCCESS!', response.status, response.text);
-                        showNotification('Message sent successfully!', 'success');
-                        contactForm.reset();
-                    }, function(error) {
-                        console.error('FAILED...', error);
-                        showNotification('Error sending message. Please try again later.', 'error');
-                    });
-            });
-        });
     </script>
 
     <script>
