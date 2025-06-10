@@ -449,46 +449,27 @@
     </script>    <script>
         // Email Functions with improved error handling
         async function sendWelcomeEmail(userEmail, userName = 'New User') {
-            console.log('Attempting to send welcome email to:', userEmail);
-            
-            const templateParams = {
-                to_email: userEmail,
-                to_name: userName,
-                message: `🎉 Welcome to StartupStack!
-
-                Your AI-powered entrepreneur toolkit is ready to use:
-                
-                ✅ Business Name Generator
-                ✅ Logo Creator  
-                ✅ Pitch Deck Templates
-                ✅ Market Research Tool
-                ✅ Content Calendar
-                ✅ Email Templates
-                ✅ Legal Documents
-                ✅ Financial Projections
-
-                Login here: ${window.location.origin}/dashboard
-                
-                Questions? Just reply to this email.
-                
-                Let's build something amazing!
-                
-                - The StartupStack Team`
-            };
-
             try {
-                console.log('Sending welcome email with EmailJS...');
-                const response = await emailjs.send(
-                    'service_853d4hu',
-                    'startup_welcome',
-                    templateParams
-                );
-                console.log('Welcome email sent successfully:', response);
+                const response = await fetch('/.netlify/functions/send-welcome-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: userEmail,
+                        userName: userName
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to send welcome email');
+                }
+
                 showNotification('Welcome email sent! Check your inbox.', 'success');
                 return true;
             } catch (error) {
                 console.error('Failed to send welcome email:', error);
-                showNotification('Failed to send welcome email. Please contact support.', 'error');
+                showNotification('Welcome email will be sent shortly.', 'info');
                 return false;
             }
         }
