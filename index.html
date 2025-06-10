@@ -440,10 +440,65 @@
         }
     }
 }
-    </script>
+    </script>    <script>
+        // Email Functions
+        function sendWelcomeEmail(userEmail, userName = 'New User') {
+            const templateParams = {
+                to_email: userEmail,
+                to_name: userName,
+                from_name: 'StartupStack',
+                subject: 'Welcome to StartupStack - Your AI Toolkit Awaits!',
+                message: `
+                🎉 Welcome to StartupStack!
 
-    <!-- EmailJS Integration (for contact form) -->
-    <script>
+                Your AI-powered entrepreneur toolkit is ready to use:
+                
+                ✅ Business Name Generator
+                ✅ Logo Creator  
+                ✅ Pitch Deck Templates
+                ✅ Market Research Tool
+                ✅ Content Calendar
+                ✅ Email Templates
+                ✅ Legal Documents
+                ✅ Financial Projections
+
+                Login here: ${window.location.origin}/dashboard
+                
+                Questions? Just reply to this email.
+                
+                Let's build something amazing!
+                
+                - The StartupStack Team
+                `
+            };
+
+            emailjs.send('service_853d4hu', 'startup_welcome', templateParams)
+                .then(function(response) {
+                    console.log('Welcome email sent!', response.status);
+                    showNotification('Welcome email sent! Check your inbox.', 'success');
+                }, function(error) {
+                    console.log('Email failed:', error);
+                    showNotification('Failed to send welcome email', 'error');
+                });
+        }
+
+        function sendTrialEndingEmail(userEmail) {
+            const templateParams = {
+                to_email: userEmail,
+                subject: 'Your StartupStack trial ends in 3 days',
+                message: `Your StartupStack free trial ends in 3 days. 
+                         Upgrade now to keep access to all your AI tools: 
+                         ${window.location.origin}/upgrade`
+            };
+
+            emailjs.send('service_853d4hu', 'TrialEndingEmail', templateParams)
+                .then(function(response) {
+                    console.log('Trial ending email sent!', response.status);
+                }, function(error) {
+                    console.log('Trial ending email failed:', error);
+                });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const contactForm = document.getElementById('contact-form');
             if (!contactForm) return;
@@ -454,7 +509,7 @@
                 const formData = new FormData(contactForm);
                 const data = Object.fromEntries(formData);
 
-                emailjs.send('service_xxx', 'template_xxx', data)
+                emailjs.send('service_853d4hu', 'startup_welcome', data)
                     .then(function(response) {
                         console.log('SUCCESS!', response.status, response.text);
                         showNotification('Message sent successfully!', 'success');
@@ -628,11 +683,12 @@ async function createCheckoutSession(email, userId) {
                         throw new Error('Email already exists. Please log in.');
                     }
                     throw new Error('Failed to create account. Please try again.');
-                }
-
-                // Store user data in localStorage
+                }                // Store user data in localStorage
                 localStorage.setItem('userId', newUser.id);
                 localStorage.setItem('userEmail', email);
+
+                // Send welcome email
+                sendWelcomeEmail(email);
 
                 // Create checkout session for new user
                 try {
@@ -651,7 +707,7 @@ async function createCheckoutSession(email, userId) {
             submitButton.innerHTML = isLoginMode ? 'Log In' : 'Sign Up';
         }
     });
-</script>
+    </script>
 
 </body>
 </html>
