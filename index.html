@@ -454,9 +454,7 @@
             const templateParams = {
                 to_email: userEmail,
                 to_name: userName,
-                from_name: 'StartupStack',
-                message: `
-                🎉 Welcome to StartupStack!
+                message: `🎉 Welcome to StartupStack!
 
                 Your AI-powered entrepreneur toolkit is ready to use:
                 
@@ -475,13 +473,16 @@
                 
                 Let's build something amazing!
                 
-                - The StartupStack Team
-                `
+                - The StartupStack Team`
             };
 
             try {
                 console.log('Sending welcome email with EmailJS...');
-                const response = await emailjs.send('service_853d4hu', 'startup_welcome', templateParams);
+                const response = await emailjs.send(
+                    'service_853d4hu',
+                    'startup_welcome',  // Using the correct template ID
+                    templateParams
+                );
                 console.log('Welcome email sent successfully:', response);
                 showNotification('Welcome email sent! Check your inbox.', 'success');
                 return true;
@@ -493,7 +494,11 @@
                 try {
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     console.log('Retrying welcome email...');
-                    const response = await emailjs.send('service_853d4hu', 'startup_welcome', templateParams);
+                    const response = await emailjs.send(
+                        'service_853d4hu',
+                        'startup_welcome',  // Using the correct template ID
+                        templateParams
+                    );
                     console.log('Welcome email sent on retry:', response);
                     showNotification('Welcome email sent! Check your inbox.', 'success');
                     return true;
