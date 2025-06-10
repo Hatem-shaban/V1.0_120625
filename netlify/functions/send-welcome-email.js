@@ -11,7 +11,7 @@ exports.handler = async (event, context) => {
 
         const msg = {
             to: email,
-            from: 'welcome@startupstack.ai', // Verify this domain in SendGrid
+            from: 'hatem.shaban@gmail.com', // Verify this domain in SendGrid
             subject: 'Welcome to StartupStack - Your AI Toolkit Awaits!',
             text: `Welcome to StartupStack!`,
             html: `
