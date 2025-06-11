@@ -72,22 +72,37 @@ exports.handler = async (event, context) => {
                 userId: userId,
                 priceId: priceId || process.env.STRIPE_PRICE_ID
             }
-        });        // Update user status
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({ 
-                subscription_status: 'pending_activation',
-                stripe_session_id: session.id,
-                selected_plan: priceId || process.env.STRIPE_PRICE_ID,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
+        });        // Update user status with retry logic
+        let retryCount = 0;
+        const maxRetries = 3;
+        let updateError;
+
+        while (retryCount < maxRetries) {
+            const { error } = await supabase
+                .from('users')
+                .update({ 
+                    subscription_status: isLifetimePlan ? 'pending_lifetime' : 'pending_activation',
+                    stripe_session_id: session.id,
+                    selected_plan: priceId || process.env.STRIPE_PRICE_ID,
+                    updated_at: new Date().toISOString(),
+                    plan_type: isLifetimePlan ? 'lifetime' : 'subscription'
+                })
+                .eq('id', userId);
+
+            if (!error) {
+                updateError = null;
+                break;
+            }
+
+            updateError = error;
+            retryCount++;
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+        }
 
         if (updateError) {
-            console.error('Error updating user status:', updateError);
-            // Don't throw error, just log it and continue
-            // The checkout can still proceed even if the status update fails
-            // The webhook will update the status later
+            console.error('Error updating user status after retries:', updateError);
+            // Even if update fails, continue with checkout
+            // The webhook will attempt to update the status again
         }
 
         return {

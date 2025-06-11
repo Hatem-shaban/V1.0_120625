@@ -195,9 +195,7 @@
                     showNotification('Error activating subscription. Please contact support.', 'error');
                 }
             }
-        }
-
-        // Handle Stripe success redirect
+        }        // Handle Stripe success redirect
         async function handleStripeSuccess() {
             const urlParams = new URLSearchParams(window.location.search);
             const sessionId = urlParams.get('session_id');
@@ -211,10 +209,23 @@
                         throw new Error('No user session found');
                     }
 
-                    // Update subscription status
+                    // Get user's current plan type
+                    const { data: userData, error: userError } = await stack.supabase
+                        .from('users')
+                        .select('plan_type, stripe_session_id')
+                        .eq('id', userId)
+                        .single();
+
+                    if (userError) throw userError;
+
+                    // Update subscription status based on plan type
                     const { error } = await stack.supabase
                         .from('users')
-                        .update({ subscription_status: 'active' })
+                        .update({ 
+                            subscription_status: userData.plan_type === 'lifetime' ? 'lifetime_active' : 'active',
+                            stripe_session_id: sessionId,
+                            activated_at: new Date().toISOString()
+                        })
                         .eq('id', userId);
 
                     if (error) throw error;
