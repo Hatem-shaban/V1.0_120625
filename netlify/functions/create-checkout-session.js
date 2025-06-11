@@ -54,12 +54,13 @@ exports.handler = async (event, context) => {
                 headers,
                 body: JSON.stringify({ error: 'User not found' })
             };
-        }
-
+        }        // Determine checkout mode based on the price ID
+        const isLifetimePlan = priceId === 'price_1RYhFGE92IbV5FBUqiKOcIqX';
+        
         // Create Stripe checkout session with specified price ID
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
-            mode: 'subscription',
+            mode: isLifetimePlan ? 'payment' : 'subscription',
             line_items: [{
                 price: priceId || process.env.STRIPE_PRICE_ID, // Use provided price ID or fallback to default
                 quantity: 1,
