@@ -50,6 +50,7 @@
         window.startCheckout = async function(event) {
             event.preventDefault();
             const currentButton = event.currentTarget;
+            const originalText = currentButton.innerHTML;
             
             try {
                 currentButton.disabled = true;
@@ -62,6 +63,9 @@
 
                 // Store the selected price ID
                 const priceId = currentButton.dataset.priceId;
+                if (!priceId) {
+                    throw new Error('Invalid price selected');
+                }
                 localStorage.setItem('selectedPriceId', priceId);
 
                 openAuthModal();
@@ -72,8 +76,7 @@
             } finally {
                 if (currentButton) {
                     currentButton.disabled = false;
-                    const buttonText = priceId ? currentButton.textContent : 'Subscribe Now';
-                    currentButton.innerHTML = `<i class="fas fa-credit-card mr-2"></i>${buttonText}`;
+                    currentButton.innerHTML = originalText;
                 }
             }
         };
@@ -393,10 +396,13 @@
     <section class="py-20 bg-gradient-to-r from-purple-600 to-pink-600">
         <div class="max-w-4xl mx-auto px-6 text-center">
             <h2 class="text-4xl font-bold mb-6">Ready to Launch Your Startup?</h2>
-            <p class="text-xl mb-8">Join 500+ entrepreneurs who've already started their journey with StartupStack</p>
-            <button onclick="startCheckout(event)" class="bg-white text-purple-600 px-8 py-4 rounded-lg text-xl font-semibold hover:bg-gray-100">
-    Start Your Free Trial Today
-</button>
+            <p class="text-xl mb-8">Join 500+ entrepreneurs who've already started their journey with StartupStack</p>            <button 
+                onclick="startCheckout(event)" 
+                data-checkout-button
+                data-price-id="price_1RSdrmE92IbV5FBUV1zE2VhD"
+                class="bg-white text-purple-600 px-8 py-4 rounded-lg text-xl font-semibold hover:bg-gray-100">
+                <i class="fas fa-credit-card mr-2"></i>Start Your Free Trial Today
+            </button>
         </div>
     </section>
 
@@ -443,34 +449,37 @@
 
         async function startCheckout(event) {
             event.preventDefault();
-    const currentButton = event.currentTarget;
-    
-    try {
-        currentButton.disabled = true;
-        currentButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            const currentButton = event.currentTarget;
+            const originalText = currentButton.innerHTML;
+            
+            try {
+                currentButton.disabled = true;
+                currentButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-        // Initialize StartupStack if needed
-        if (!window.StartupStack?.initialized) {
-            await initializeApp();
+                // Initialize StartupStack if needed
+                if (!window.StartupStack?.initialized) {
+                    await initializeApp();
+                }
+
+                // Store the selected price ID
+                const priceId = currentButton.dataset.priceId;
+                if (!priceId) {
+                    throw new Error('Invalid price selected');
+                }
+                localStorage.setItem('selectedPriceId', priceId);
+
+                openAuthModal();
+
+            } catch (error) {
+                console.error('Checkout error:', error);
+                showNotification(error.message || 'Something went wrong', 'error');
+            } finally {
+                if (currentButton) {
+                    currentButton.disabled = false;
+                    currentButton.innerHTML = originalText;
+                }
+            }
         }
-
-        // Store the selected price ID
-        const priceId = currentButton.dataset.priceId;
-        localStorage.setItem('selectedPriceId', priceId);
-
-        openAuthModal();
-
-    } catch (error) {
-        console.error('Checkout error:', error);
-        showNotification(error.message || 'Something went wrong', 'error');
-    } finally {
-        if (currentButton) {
-            currentButton.disabled = false;
-            const buttonText = priceId ? currentButton.textContent : 'Subscribe Now';
-            currentButton.innerHTML = `<i class="fas fa-credit-card mr-2"></i>${buttonText}`;
-        }
-    }
-}
     </script>    <script>
         // Email Functions with improved error handling
         async function sendWelcomeEmail(userEmail, userName = 'New User') {
