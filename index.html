@@ -150,51 +150,16 @@
             }
         }
 
-        // Update the payment success handler
+        // Update the payment success handler        // Note: This function is now deprecated in favor of handleStripeSuccess
         async function handlePaymentSuccess() {
             const urlParams = new URLSearchParams(window.location.search);
             const sessionId = urlParams.get('session_id');
             
+            // Redirect to handleStripeSuccess to avoid duplicate handling
             if (sessionId) {
-                try {
-                    const userId = localStorage.getItem('userId');
-                    const email = localStorage.getItem('userEmail');
-                    
-                    if (!userId || !email) {
-                        throw new Error('User session not found');
-                    }
-
-                    // Initialize StartupStack if needed
-                    if (!window.StartupStack?.initialized) {
-                        await initializeApp();
-                    }
-
-                    // Update user subscription status
-                    const { error: updateError } = await window.StartupStack.supabase
-                        .from('users')
-                        .update({ subscription_status: 'active' })
-                        .eq('id', userId);
-
-                    if (updateError) throw updateError;
-
-                    // Store session data
-                    localStorage.setItem('sessionId', sessionId);
-                    localStorage.setItem('subscriptionActive', 'true');
-
-                    // Show success message and redirect
-                    showNotification('Subscription activated successfully!', 'success');
-                    
-                    // Delay redirect to ensure notification is seen
-                    setTimeout(() => {
-                        window.location.replace('/dashboard.html');
-                    }, 2000);
-
-                } catch (error) {
-                    console.error('Payment success handling error:', error);
-                    showNotification('Error activating subscription. Please contact support.', 'error');
-                }
+                handleStripeSuccess();
             }
-        }        // Handle Stripe success redirect
+        }// Handle Stripe success redirect
         async function handleStripeSuccess() {
             const urlParams = new URLSearchParams(window.location.search);
             const sessionId = urlParams.get('session_id');
@@ -229,26 +194,21 @@
 
                     if (error) throw error;
 
-                    // Show success message
+                    // Show success message and redirect once
                     showNotification('Subscription activated successfully!', 'success');
-                    
-                    // Redirect to dashboard after short delay
-                    setTimeout(() => {
-                        window.location.href = '/dashboard.html';
-                    }, 1500);
+                    window.location.href = '/dashboard.html';
 
                 } catch (error) {
                     console.error('Payment success handling error:', error);
                     showNotification('Error activating subscription', 'error');
-                    setTimeout(() => {
-                        window.location.href = '/?subscription=error';
-                    }, 1500);
+                    window.location.href = '/?subscription=error';
                 }
             }
         }
 
         // Check for success redirect on page load
-        if (window.location.search.includes('session_id')) {
+        // Only handle if we're not already on the success page
+        if (window.location.search.includes('session_id') && !window.location.pathname.includes('success.html')) {
             handleStripeSuccess();
         }
     </script>
