@@ -72,21 +72,22 @@ exports.handler = async (event, context) => {
                 userId: userId,
                 priceId: priceId || process.env.STRIPE_PRICE_ID
             }
-        });
-
-        // Update user status
+        });        // Update user status
         const { error: updateError } = await supabase
             .from('users')
             .update({ 
                 subscription_status: 'pending_activation',
                 stripe_session_id: session.id,
-                selected_plan: priceId || process.env.STRIPE_PRICE_ID
+                selected_plan: priceId || process.env.STRIPE_PRICE_ID,
+                updated_at: new Date().toISOString()
             })
             .eq('id', userId);
 
         if (updateError) {
             console.error('Error updating user status:', updateError);
-            throw new Error('Failed to update user status');
+            // Don't throw error, just log it and continue
+            // The checkout can still proceed even if the status update fails
+            // The webhook will update the status later
         }
 
         return {
@@ -94,7 +95,8 @@ exports.handler = async (event, context) => {
             headers,
             body: JSON.stringify({ 
                 id: session.id,
-                userId: userId
+                userId: userId,
+                success: true
             })
         };
 

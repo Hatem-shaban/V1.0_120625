@@ -602,17 +602,16 @@ async function createCheckoutSession(email, userId) {
             userId,
             priceId: priceId || process.env.STRIPE_PRICE_ID // Fallback to default price
         })
-    });
-
-    if (!response.ok) {
+    });    if (!response.ok) {
         const errorData = await response.json();
         console.error('Checkout error:', errorData);
         throw new Error(errorData.error || ERROR_MESSAGES.CHECKOUT_FAILED);
     }
 
     const data = await response.json();
-    if (!data.id) {
-        throw new Error(ERROR_MESSAGES.INVALID_RESPONSE);
+    if (!data.id || !data.success) {
+        console.error('Invalid checkout response:', data);
+        throw new Error(data.error || ERROR_MESSAGES.INVALID_RESPONSE);
     }
 
     return data.id;
