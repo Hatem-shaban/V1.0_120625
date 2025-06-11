@@ -33,13 +33,13 @@ exports.handler = async (event, context) => {
             throw new Error('Method not allowed');
         }
 
-        const { customerEmail, userId } = JSON.parse(event.body);
+        const { customerEmail, userId, priceId } = JSON.parse(event.body);
 
         if (!customerEmail || !userId) {
             throw new Error('Missing required fields');
         }
 
-        // First verify the user exists
+        // Verify user exists
         const { data: existingUser, error: userError } = await supabase
             .from('users')
             .select('id, email, subscription_status')
@@ -56,28 +56,30 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // Create Stripe checkout session
+        // Create Stripe checkout session with specified price ID
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             mode: 'subscription',
             line_items: [{
-                price: process.env.STRIPE_PRICE_ID,
+                price: priceId || process.env.STRIPE_PRICE_ID, // Use provided price ID or fallback to default
                 quantity: 1,
             }],
             success_url: `${process.env.URL}/success.html?session_id={CHECKOUT_SESSION_ID}&userId=${userId}`,
             cancel_url: `${process.env.URL}?checkout=cancelled`,
             customer_email: customerEmail,
             metadata: {
-                userId: userId
+                userId: userId,
+                priceId: priceId || process.env.STRIPE_PRICE_ID
             }
         });
 
-        // Update user status without returning data
+        // Update user status
         const { error: updateError } = await supabase
             .from('users')
             .update({ 
                 subscription_status: 'pending_activation',
-                stripe_session_id: session.id
+                stripe_session_id: session.id,
+                selected_plan: priceId || process.env.STRIPE_PRICE_ID
             })
             .eq('id', userId);
 

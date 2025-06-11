@@ -60,6 +60,10 @@
                     await initializeApp();
                 }
 
+                // Store the selected price ID
+                const priceId = currentButton.dataset.priceId;
+                localStorage.setItem('selectedPriceId', priceId);
+
                 openAuthModal();
 
             } catch (error) {
@@ -68,7 +72,8 @@
             } finally {
                 if (currentButton) {
                     currentButton.disabled = false;
-                    currentButton.innerHTML = '<i class="fas fa-credit-card mr-2"></i>Subscribe Now';
+                    const buttonText = priceId ? currentButton.textContent : 'Subscribe Now';
+                    currentButton.innerHTML = `<i class="fas fa-credit-card mr-2"></i>${buttonText}`;
                 }
             }
         };
@@ -329,7 +334,14 @@
                         <li><i class="fas fa-check text-green-400 mr-2"></i>Basic Templates</li>
                         <li><i class="fas fa-check text-green-400 mr-2"></i>Email Support</li>
                     </ul>
-                    <button class="w-full bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-600">Choose Starter</button>
+                    <button 
+                        onclick="startCheckout(event)"
+                        data-checkout-button
+                        data-price-id="price_1RYhAlE92IbV5FBUCtOmXIow"
+                        disabled
+                        class="w-full bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-600 transition duration-200">
+                        <i class="fas fa-credit-card mr-2"></i>Choose Starter
+                    </button>
                 </div>
                 
                 <!-- Pro (Featured) -->
@@ -347,6 +359,7 @@
                     <button 
     onclick="startCheckout(event)" 
     data-checkout-button
+    data-price-id="price_1RYhFGE92IbV5FBUqiKOcIqX"
     disabled
     class="w-full bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition duration-200">
     <i class="fas fa-credit-card mr-2"></i>Subscribe Now
@@ -363,7 +376,14 @@
                         <li><i class="fas fa-check text-green-400 mr-2"></i>Future Tools Included</li>
                         <li><i class="fas fa-check text-green-400 mr-2"></i>Reseller Rights</li>
                     </ul>
-                    <button class="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white py-3 rounded-lg hover:opacity-90">Get Lifetime Access</button>
+                    <button 
+                        onclick="startCheckout(event)"
+                        data-checkout-button
+                        data-price-id="price_1RYhFGE92IbV5FBUqiKOcIqX"
+                        disabled
+                        class="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white py-3 rounded-lg hover:opacity-90 transition duration-200">
+                        <i class="fas fa-credit-card mr-2"></i>Get Lifetime Access
+                    </button>
                 </div>
             </div>
         </div>
@@ -434,6 +454,10 @@
             await initializeApp();
         }
 
+        // Store the selected price ID
+        const priceId = currentButton.dataset.priceId;
+        localStorage.setItem('selectedPriceId', priceId);
+
         openAuthModal();
 
     } catch (error) {
@@ -442,7 +466,8 @@
     } finally {
         if (currentButton) {
             currentButton.disabled = false;
-            currentButton.innerHTML = '<i class="fas fa-credit-card mr-2"></i>Subscribe Now';
+            const buttonText = priceId ? currentButton.textContent : 'Subscribe Now';
+            currentButton.innerHTML = `<i class="fas fa-credit-card mr-2"></i>${buttonText}`;
         }
     }
 }
@@ -555,13 +580,19 @@ const ERROR_MESSAGES = {
 };
 
 async function createCheckoutSession(email, userId) {
+    const priceId = localStorage.getItem('selectedPriceId');
+    
     const response = await fetch('/.netlify/functions/create-checkout-session', {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         },
-        body: JSON.stringify({ customerEmail: email, userId })
+        body: JSON.stringify({ 
+            customerEmail: email, 
+            userId,
+            priceId: priceId || process.env.STRIPE_PRICE_ID // Fallback to default price
+        })
     });
 
     if (!response.ok) {
