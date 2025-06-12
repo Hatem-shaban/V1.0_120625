@@ -182,7 +182,16 @@
                     if (error) throw error;                    // Send welcome email after successful subscription
                     const userEmail = localStorage.getItem('userEmail');
                     if (userEmail) {
-                        await sendWelcomeEmail(userEmail);
+                        try {
+                            const emailResult = await sendWelcomeEmail(userEmail);
+                            if (!emailResult) {
+                                console.error('Welcome email sending failed');
+                                // Continue with subscription activation even if email fails
+                            }
+                        } catch (emailError) {
+                            console.error('Welcome email error:', emailError);
+                            // Continue with subscription activation even if email fails
+                        }
                     }
 
                     // Show success message and redirect once

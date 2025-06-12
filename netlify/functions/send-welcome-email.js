@@ -38,12 +38,18 @@ exports.handler = async (event, context) => {
         return {
             statusCode: 200,
             body: JSON.stringify({ message: 'Welcome email sent successfully' })
-        };
-    } catch (error) {
+        };    } catch (error) {
         console.error('Email sending failed:', error);
+        // Log more detailed error information
+        if (!process.env.SENDGRID_API_KEY) {
+            console.error('SENDGRID_API_KEY is missing');
+        }
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: 'Failed to send welcome email' })
+            body: JSON.stringify({ 
+                error: 'Failed to send welcome email',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            })
         };
     }
 };
