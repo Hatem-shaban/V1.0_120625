@@ -47,12 +47,12 @@
 
                 if (verifyError) throw verifyError;                if (verifyUser.subscription_status !== 'active') {
                     throw new Error('Subscription status update failed');
-                }
-
-                // Send welcome email
+                }                // Send welcome email
                 const userEmail = localStorage.getItem('userEmail');
+                statusDiv.innerHTML = 'Sending welcome email...';
                 if (userEmail) {
                     try {
+                        console.log('Attempting to send welcome email to:', userEmail);
                         const response = await fetch('/.netlify/functions/send-welcome-email', {
                             method: 'POST',
                             headers: {
@@ -64,12 +64,23 @@
                             })
                         });
 
+                        const responseData = await response.json();
+                        console.log('Welcome email response:', responseData);
+
                         if (!response.ok) {
-                            console.error('Failed to send welcome email');
+                            console.error('Failed to send welcome email:', responseData);
+                            throw new Error('Failed to send welcome email: ' + (responseData.error || ''));
+                        } else {
+                            console.log('Welcome email sent successfully');
+                            statusDiv.innerHTML = 'Welcome email sent successfully...';
                         }
                     } catch (error) {
                         console.error('Welcome email error:', error);
+                        // Don't throw the error, but log it and show in status
+                        statusDiv.innerHTML = 'Welcome email sending failed (will retry later)...';
                     }
+                } else {
+                    console.error('No user email found in localStorage');
                 }
 
                 statusDiv.innerHTML = 'Subscription activated successfully!';

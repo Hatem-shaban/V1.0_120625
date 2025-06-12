@@ -2,12 +2,47 @@ const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 exports.handler = async (event, context) => {
+    console.log('Welcome email function triggered');
+
+    // Add CORS headers
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+    };
+
+    // Handle preflight requests
+    if (event.httpMethod === 'OPTIONS') {
+        return {
+            statusCode: 200,
+            headers
+        };
+    }
+
     if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
+        return { 
+            statusCode: 405, 
+            headers,
+            body: JSON.stringify({ error: 'Method Not Allowed' })
+        };
     }
 
     try {
+        console.log('Request body:', event.body);
         const { email, userName } = JSON.parse(event.body);
+
+        if (!email) {
+            console.error('No email provided');
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Email is required' })
+            };
+        }
+
+        // Log SendGrid configuration
+        console.log('SENDGRID_API_KEY exists:', !!process.env.SENDGRID_API_KEY);
+        console.log('URL configured:', process.env.URL);
 
         const msg = {
             to: email,
@@ -58,15 +93,28 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({ message: 'Welcome email sent successfully' })
         };    } catch (error) {
         console.error('Email sending failed:', error);
-        // Log more detailed error information
+        
+        // Detailed error logging
         if (!process.env.SENDGRID_API_KEY) {
             console.error('SENDGRID_API_KEY is missing');
         }
+        
+        if (error.response) {
+            // SendGrid error response
+            console.error('SendGrid error response:', {
+                status: error.response.status,
+                body: error.response.body,
+                headers: error.response.headers
+            });
+        }
+
         return {
             statusCode: 500,
+            headers,
             body: JSON.stringify({ 
                 error: 'Failed to send welcome email',
-                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+                details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+                sendgridError: error.response ? error.response.body : undefined
             })
         };
     }
