@@ -45,10 +45,31 @@
                     .eq('id', userId)
                     .single();
 
-                if (verifyError) throw verifyError;
-
-                if (verifyUser.subscription_status !== 'active') {
+                if (verifyError) throw verifyError;                if (verifyUser.subscription_status !== 'active') {
                     throw new Error('Subscription status update failed');
+                }
+
+                // Send welcome email
+                const userEmail = localStorage.getItem('userEmail');
+                if (userEmail) {
+                    try {
+                        const response = await fetch('/.netlify/functions/send-welcome-email', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                email: userEmail,
+                                userName: 'New User'
+                            })
+                        });
+
+                        if (!response.ok) {
+                            console.error('Failed to send welcome email');
+                        }
+                    } catch (error) {
+                        console.error('Welcome email error:', error);
+                    }
                 }
 
                 statusDiv.innerHTML = 'Subscription activated successfully!';
