@@ -16,7 +16,6 @@
   STRIPE_PRICE_ID = ""
   SENDGRID_API_KEY = ""
   SENDGRID_FROM_EMAIL = ""
-  SENDGRID_FROM_EMAIL = ""  # Use a verified sender domain email address here
 
 [[headers]]
   for = "/*"
