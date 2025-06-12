@@ -12,9 +12,9 @@
   SUPABASE_URL = ""
   SUPABASE_ANON_KEY = ""
   STRIPE_PUBLIC_KEY = ""
-  STRIPE_SECRET_KEY = ""
-  STRIPE_PRICE_ID = ""
+  STRIPE_SECRET_KEY = ""  STRIPE_PRICE_ID = ""
   SENDGRID_API_KEY = ""
+  SENDGRID_FROM_EMAIL = ""  # Use a verified sender domain email address here
 
 [[headers]]
   for = "/*"

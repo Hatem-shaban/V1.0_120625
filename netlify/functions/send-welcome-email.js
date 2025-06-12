@@ -46,7 +46,8 @@ exports.handler = async (event, context) => {
 
         const msg = {
             to: email,
-            from: 'hatem.shaban@gmail.com', // Verify this domain in SendGrid            subject: '🎉 Welcome to StartupStack!',
+            from: process.env.SENDGRID_FROM_EMAIL, // Use environment variable for verified sender
+            subject: '🎉 Welcome to StartupStack!',
             text: `Welcome to StartupStack!`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
