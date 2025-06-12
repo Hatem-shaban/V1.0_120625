@@ -179,7 +179,11 @@
                         })
                         .eq('id', userId);
 
-                    if (error) throw error;
+                    if (error) throw error;                    // Send welcome email after successful subscription
+                    const userEmail = localStorage.getItem('userEmail');
+                    if (userEmail) {
+                        await sendWelcomeEmail(userEmail);
+                    }
 
                     // Show success message and redirect once
                     showNotification('Subscription activated successfully!', 'success');
@@ -658,9 +662,6 @@ async function createCheckoutSession(email, userId) {
                 }                // Store user data in localStorage
                 localStorage.setItem('userId', newUser.id);
                 localStorage.setItem('userEmail', email);
-
-                // Send welcome email
-                sendWelcomeEmail(email);
 
                 // Create checkout session for new user
                 try {
