@@ -358,17 +358,21 @@
                 <i class="fas fa-credit-card mr-2"></i>Start Your Free Trial Today
             </button>
         </div>
-    </section>
-
-    <!-- Auth Modal -->
+    </section>    <!-- Auth Modal -->
 <div id="authModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-    <div class="bg-gray-800 p-8 rounded-lg max-w-md w-full mx-4">
+    <div class="bg-gray-800 p-8 rounded-lg max-w-md w-full mx-4 shadow-xl">
         <!-- Modal Header -->
         <div class="flex justify-between items-center mb-6">
             <h2 id="authTitle" class="text-2xl font-bold text-white">Log In</h2>
             <button onclick="closeAuthModal()" class="text-gray-400 hover:text-white">
                 <i class="fas fa-times"></i>
             </button>
+        </div>
+        
+        <!-- Auth Tabs -->
+        <div class="flex mb-4 border-b border-gray-700">
+            <button id="loginTab" onclick="switchTab('login')" class="flex-1 py-2 text-center font-medium text-white border-b-2 border-purple-500 transition duration-200">Log In</button>
+            <button id="signupTab" onclick="switchTab('signup')" class="flex-1 py-2 text-center font-medium text-gray-400 transition duration-200">Sign Up</button>
         </div>
 
         <!-- Auth Form -->
@@ -379,16 +383,24 @@
                     class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500">
             </div>
 
+            <div id="nameField" class="hidden">
+                <label for="userName" class="block text-sm font-medium mb-2 text-white">Your Name</label>
+                <input type="text" id="userName" name="userName" 
+                    class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500">
+            </div>
+
             <button type="submit" id="authSubmitBtn" 
                 class="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition duration-200">
                 Log In
             </button>
-
-            <p class="text-center text-sm text-gray-400">
-                <span id="authToggleText">New to StartupStack?</span>
-                <button type="button" onclick="toggleAuthMode()" class="text-purple-400 hover:text-purple-300 ml-1">
-                    <span id="authToggleAction">Sign Up</span>
-                </button>
+            
+            <div id="authHelperText" class="mt-3 text-center text-sm text-gray-400">
+                <span id="loginHelper">New user? <a href="#" onclick="switchTab('signup'); return false;" class="text-purple-400 hover:underline">Create an account</a></span>
+                <span id="signupHelper" class="hidden">Already have an account? <a href="#" onclick="switchTab('login'); return false;" class="text-purple-400 hover:underline">Log in</a></span>
+            </div>
+            
+            <p class="text-center text-sm text-gray-400 mt-4">
+                By continuing, you agree to our <a href="#" class="text-purple-400 hover:underline">Terms of Service</a> and <a href="#" class="text-purple-400 hover:underline">Privacy Policy</a>
             </p>
         </form>
     </div>
@@ -487,26 +499,53 @@
         }
     </script>
 
-    <script>
-        // Global notification function
-        window.showNotification = function(message, type = 'error') {
+    <script>        // Global notification function with improved styling and animation
+        window.showNotification = function(message, type = 'info') {
             const notification = document.createElement('div');
-            notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${
-                type === 'error' ? 'bg-red-600' : 
-                type === 'success' ? 'bg-green-600' : 
-                'bg-blue-600'
-            } transition-opacity duration-300`;
-            notification.textContent = message;
+            
+            // Set styles based on notification type
+            let bgColor, iconClass;
+            switch(type) {
+                case 'success':
+                    bgColor = 'bg-green-600';
+                    iconClass = 'fa-check-circle';
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-600';
+                    iconClass = 'fa-exclamation-circle';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-yellow-500';
+                    iconClass = 'fa-exclamation-triangle';
+                    break;
+                case 'info':
+                default:
+                    bgColor = 'bg-blue-600';
+                    iconClass = 'fa-info-circle';
+            }
+            
+            notification.className = `fixed top-4 right-4 ${bgColor} text-white py-3 px-5 rounded-md shadow-lg flex items-center space-x-3 z-50 transform transition-all duration-300 ease-out`;
+            notification.style.maxWidth = '90%';
+            
+            // Add icon and message
+            notification.innerHTML = `
+                <i class="fas ${iconClass} text-lg"></i>
+                <span>${message}</span>
+            `;
+            
+            // Add to DOM
             document.body.appendChild(notification);
             
+            // Animation
             setTimeout(() => {
+                notification.style.transform = 'translateX(20px)';
                 notification.style.opacity = '0';
-                setTimeout(() => notification.remove(), 300);
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
             }, 3000);
         };
-    </script>
-
-    <script>
+    </script>    <script>
     let isLoginMode = true;
 
     // Show auth modal immediately if auth is required
@@ -514,6 +553,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('auth') || urlParams.has('subscription')) {
             openAuthModal();
+            
+            // If coming from signup parameter, switch to signup tab
+            if (urlParams.has('auth') && urlParams.get('auth') === 'signup') {
+                switchTab('signup');
+            }
         }
     });
 
@@ -524,57 +568,126 @@
     function closeAuthModal() {
         document.getElementById('authModal').classList.add('hidden');
     }
-
-    function toggleAuthMode() {
-        isLoginMode = !isLoginMode;
-        document.getElementById('authTitle').textContent = isLoginMode ? 'Log In' : 'Sign Up';
-        document.getElementById('authToggleText').textContent = isLoginMode ? 'New to StartupStack?' : 'Already have an account?';
-        document.getElementById('authToggleAction').textContent = isLoginMode ? 'Sign Up' : 'Log In';
-        document.getElementById('authSubmitBtn').textContent = isLoginMode ? 'Log In' : 'Create Account';
-    }
-
-    // Error messages
-const ERROR_MESSAGES = {
-    USER_NOT_FOUND: 'User not found. Please sign up.',
-    EMAIL_EXISTS: 'Email already exists. Please log in.',
-    CHECKOUT_FAILED: 'Failed to start checkout process. Please try again.',
-    CREATE_USER_FAILED: 'Failed to create account. Please try again.',
-    INVALID_RESPONSE: 'Invalid server response. Please try again.'
-};
-
-async function createCheckoutSession(email, userId) {
-    const priceId = localStorage.getItem('selectedPriceId');
     
-    const response = await fetch('/.netlify/functions/create-checkout-session', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({ 
-            customerEmail: email, 
-            userId,
-            priceId: priceId || process.env.STRIPE_PRICE_ID // Fallback to default price
-        })
-    });    if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Checkout error:', errorData);
-        throw new Error(errorData.error || ERROR_MESSAGES.CHECKOUT_FAILED);
+    function switchTab(mode) {
+        isLoginMode = mode === 'login';
+        
+        // Update tab styling
+        document.getElementById('loginTab').className = isLoginMode 
+            ? 'flex-1 py-2 text-center font-medium text-white border-b-2 border-purple-500 transition duration-200' 
+            : 'flex-1 py-2 text-center font-medium text-gray-400 transition duration-200';
+            
+        document.getElementById('signupTab').className = !isLoginMode 
+            ? 'flex-1 py-2 text-center font-medium text-white border-b-2 border-purple-500 transition duration-200' 
+            : 'flex-1 py-2 text-center font-medium text-gray-400 transition duration-200';
+        
+        // Update form elements
+        document.getElementById('authTitle').textContent = isLoginMode ? 'Log In' : 'Sign Up';
+        document.getElementById('authSubmitBtn').textContent = isLoginMode ? 'Log In' : 'Create Account';
+        document.getElementById('nameField').style.display = isLoginMode ? 'none' : 'block';
+        
+        // Toggle helper text
+        document.getElementById('loginHelper').classList.toggle('hidden', !isLoginMode);
+        document.getElementById('signupHelper').classList.toggle('hidden', isLoginMode);
+        
+        // If switching to signup, make name required
+        const nameInput = document.getElementById('userName');
+        nameInput.required = !isLoginMode;
+    }    // Using the globally defined showNotification function
+    const showNotification = window.showNotification;function openAuthModal() {
+        document.getElementById('authModal').classList.remove('hidden');
+        // Reset to login mode by default when opening modal
+        switchTab('login');
     }
 
-    const data = await response.json();
-    if (!data.id || !data.success) {
-        console.error('Invalid checkout response:', data);
-        throw new Error(data.error || ERROR_MESSAGES.INVALID_RESPONSE);
+    function closeAuthModal() {
+        document.getElementById('authModal').classList.add('hidden');
+        // Clear form fields
+        document.getElementById('email').value = '';
+        document.getElementById('userName').value = '';
     }
 
-    return data.id;
-}
+    function switchTab(mode) {
+        isLoginMode = mode === 'login';
+        
+        // Update tab styling
+        document.getElementById('loginTab').className = isLoginMode 
+            ? 'flex-1 py-2 text-center font-medium text-white border-b-2 border-purple-500 transition duration-200' 
+            : 'flex-1 py-2 text-center font-medium text-gray-400 transition duration-200';
+            
+        document.getElementById('signupTab').className = !isLoginMode 
+            ? 'flex-1 py-2 text-center font-medium text-white border-b-2 border-purple-500 transition duration-200' 
+            : 'flex-1 py-2 text-center font-medium text-gray-400 transition duration-200';
+        
+        // Update form elements
+        document.getElementById('authTitle').textContent = isLoginMode ? 'Log In' : 'Sign Up';
+        document.getElementById('authSubmitBtn').textContent = isLoginMode ? 'Log In' : 'Create Account';
+        document.getElementById('nameField').style.display = isLoginMode ? 'none' : 'block';
+        
+        // Toggle helper text
+        document.getElementById('loginHelper').classList.toggle('hidden', !isLoginMode);
+        document.getElementById('signupHelper').classList.toggle('hidden', isLoginMode);
+        
+        // If switching to signup, make name required
+        const nameInput = document.getElementById('userName');
+        nameInput.required = !isLoginMode;
+    }
+    </script>
+
+    <script>
+        // Error messages
+    const ERROR_MESSAGES = {
+        USER_NOT_FOUND: 'User not found. Please sign up.',
+        EMAIL_EXISTS: 'Email already exists. Please log in.',
+        CHECKOUT_FAILED: 'Failed to start checkout process. Please try again.',
+        CREATE_USER_FAILED: 'Failed to create account. Please try again.',
+        INVALID_RESPONSE: 'Invalid server response. Please try again.',
+        NAME_REQUIRED: 'Please enter your name to sign up.'
+    };
+
+    async function createCheckoutSession(email, userId) {
+        const priceId = localStorage.getItem('selectedPriceId');
+        
+        const response = await fetch('/.netlify/functions/create-checkout-session', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ 
+                customerEmail: email, 
+                userId,
+                priceId: priceId || process.env.STRIPE_PRICE_ID // Fallback to default price
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Checkout error:', errorData);
+            throw new Error(errorData.error || ERROR_MESSAGES.CHECKOUT_FAILED);
+        }
+
+        const data = await response.json();
+        if (!data.id || !data.success) {
+            console.error('Invalid checkout response:', data);
+            throw new Error(data.error || ERROR_MESSAGES.INVALID_RESPONSE);
+        }
+
+        return data.id;
+    }    
 
     document.getElementById('authForm').addEventListener('submit', async (event) => {
         event.preventDefault();
         const email = document.getElementById('email').value;
+        const userName = document.getElementById('userName').value || null;
         const submitButton = event.submitter;
+        
+        // Basic validation
+        if (!isLoginMode && !userName) {
+            showNotification(ERROR_MESSAGES.NAME_REQUIRED, 'warning');
+            document.getElementById('userName').focus();
+            return;
+        }
         
         try {
             submitButton.disabled = true;
@@ -586,7 +699,7 @@ async function createCheckoutSession(email, userId) {
             }
 
             if (isLoginMode) {
-                // Login flow with better error handling
+                // LOGIN FLOW
                 const { data: user, error: loginError } = await window.StartupStack.supabase
                     .from('users')
                     .select('*')
@@ -595,20 +708,35 @@ async function createCheckoutSession(email, userId) {
 
                 if (loginError) {
                     console.error('Login error:', loginError);
-                    throw new Error('User not found. Please sign up.');
+                    // Suggest signing up instead
+                    switchTab('signup');
+                    showNotification('Email not found. Please sign up instead.', 'info');
+                    return;
                 }
 
                 // Store user data
                 localStorage.setItem('userId', user.id);
                 localStorage.setItem('userEmail', email);
+                if (user.name) {
+                    localStorage.setItem('userName', user.name);
+                }
+
+                // Update last login time
+                await window.StartupStack.supabase
+                    .from('users')
+                    .update({ last_login: new Date().toISOString() })
+                    .eq('id', user.id);
 
                 // Check subscription status
                 if (user.subscription_status === 'active') {
-                    showNotification('Login successful!', 'success');
+                    showNotification('Welcome back!', 'success');
                     window.location.replace('/dashboard.html');
                     return;
                 }
 
+                // If subscription is pending or has an issue, redirect to checkout
+                showNotification('Please complete your subscription to continue', 'info');
+                
                 // Create checkout session with better error handling
                 try {
                     const sessionId = await createCheckoutSession(email, user.id);
@@ -619,7 +747,8 @@ async function createCheckoutSession(email, userId) {
                 }
 
             } else {
-                // Signup flow with duplicate check
+                // SIGNUP FLOW
+                // Check if user already exists
                 const { data: existingUser } = await window.StartupStack.supabase
                     .from('users')
                     .select('id, email')
@@ -627,18 +756,20 @@ async function createCheckoutSession(email, userId) {
                     .maybeSingle();
 
                 if (existingUser) {
-                    isLoginMode = true;
-                    document.getElementById('authTitle').textContent = 'Log In';
-                    document.getElementById('authSubmitBtn').textContent = 'Log In';
-                    throw new Error('Email already exists. Please log in.');
+                    // Switch to login mode if user already exists
+                    switchTab('login');
+                    showNotification('Email already exists. Please log in instead.', 'info');
+                    return;
                 }
 
-                // Create new user with only existing columns
+                // Create new user with name field
                 const { data: newUser, error: createError } = await window.StartupStack.supabase
                     .from('users')
                     .insert([{
                         email: email,
+                        name: userName,
                         created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
                         subscription_status: 'pending',
                         last_login: new Date().toISOString()
                     }])
@@ -648,14 +779,20 @@ async function createCheckoutSession(email, userId) {
                 if (createError) {
                     console.error('User creation error:', createError);
                     if (createError.code === '23505') {
-                        isLoginMode = true;
-                        document.getElementById('authTitle').textContent = 'Log In';
-                        throw new Error('Email already exists. Please log in.');
+                        switchTab('login');
+                        showNotification('Email already exists. Please log in instead.', 'info');
+                        return;
                     }
                     throw new Error('Failed to create account. Please try again.');
-                }                // Store user data in localStorage
+                }
+                
+                // Show success message
+                showNotification('Account created successfully!', 'success');
+                
+                // Store user data in localStorage
                 localStorage.setItem('userId', newUser.id);
                 localStorage.setItem('userEmail', email);
+                localStorage.setItem('userName', userName);
 
                 // Create checkout session for new user
                 try {
@@ -671,7 +808,7 @@ async function createCheckoutSession(email, userId) {
             showNotification(error.message || 'Authentication failed', 'error');
         } finally {
             submitButton.disabled = false;
-            submitButton.innerHTML = isLoginMode ? 'Log In' : 'Sign Up';
+            submitButton.innerHTML = isLoginMode ? 'Log In' : 'Create Account';
         }
     });
     </script>
