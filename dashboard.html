@@ -6,8 +6,7 @@
     <title>StartupStack Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script type="module" src="app.js"></script>
-    <style>
+    <script type="module" src="app.js"></script>    <style>
         body {
             opacity: 0;
             transition: opacity 0.5s ease-in-out;
@@ -16,6 +15,19 @@
             opacity: 1;
             transition: opacity 0.3s ease-out;
         }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        .user-profile:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .user-profile:hover #userEmail {
+            display: inline;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -23,10 +35,12 @@
         <nav class="bg-gray-800 p-4">
             <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
                 <h1 class="text-2xl font-bold">StartupStack Dashboard</h1>
-                
-                <!-- Add Profile/Logout Section -->
-                <div class="flex items-center space-x-4">
-                    <span id="userEmail" class="text-gray-300"></span>
+                  <!-- Add Profile/Logout Section -->
+                <div class="flex items-center space-x-4">                    <div class="text-gray-300 user-profile">
+                        <i class="fas fa-user-circle mr-2"></i>
+                        <span id="userDisplayName" class="font-medium"></span>
+                        <span id="userEmail" class="text-xs text-gray-400 ml-1 hidden"></span>
+                    </div>
                     <button onclick="handleLogout()" 
                             class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
                         <i class="fas fa-sign-out-alt mr-2"></i>Logout
@@ -138,20 +152,16 @@
                 return;
             }
 
-            const stack = await startupStackPromise;
-
-            const { data: user, error } = await stack.supabase
+            const stack = await startupStackPromise;            const { data: user, error } = await stack.supabase
                 .from('users')
-                .select('*')
+                .select('id, email, name, subscription_status, plan_type')
                 .eq('id', userId)
                 .eq('email', userEmail)
                 .single();
 
             if (error || !user) {
                 throw new Error('User verification failed');
-            }
-
-            if (user.subscription_status !== 'active') {
+            }            if (user.subscription_status !== 'active') {
                 window.location.replace('/?subscription=required');
                 return;
             }            // Show dashboard content with a smooth transition
@@ -159,6 +169,11 @@
                 document.body.style.opacity = '1';
             }, 100); // Small delay to ensure smooth transition
             
+            // Display user name if available, otherwise use email
+            const userName = localStorage.getItem('userName') || user.name;
+            const displayName = userName || userEmail.split('@')[0];
+            
+            document.getElementById('userDisplayName').textContent = displayName;
             document.getElementById('userEmail').textContent = userEmail;
 
             // Enable AI tools
