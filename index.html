@@ -419,12 +419,11 @@
             </p>
         </form>
     </div>
-</div>
-
-    <script>        function scrollToPrice() {
+</div>    <script>        function scrollToPrice() {
             document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
         }
-          const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
+          // Make Stripe available globally
+          window.stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
     </script>    <script>
         // Email Functions with improved error handling
         async function sendWelcomeEmail(userEmail, userName = 'New User') {
@@ -621,37 +620,40 @@
         CREATE_USER_FAILED: 'Failed to create account. Please try again.',
         INVALID_RESPONSE: 'Invalid server response. Please try again.',
         NAME_REQUIRED: 'Please enter your name to sign up.'
-    };
-
-    async function createCheckoutSession(email, userId) {
-        const priceId = localStorage.getItem('selectedPriceId');
-        
-        const response = await fetch('/.netlify/functions/create-checkout-session', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ 
-                customerEmail: email, 
-                userId,
-                priceId: priceId || process.env.STRIPE_PRICE_ID // Fallback to default price
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Checkout error:', errorData);
-            throw new Error(errorData.error || ERROR_MESSAGES.CHECKOUT_FAILED);
+    };    async function createCheckoutSession(email, userId) {
+        try {
+            const priceId = localStorage.getItem('selectedPriceId');
+            
+            const response = await fetch('/.netlify/functions/create-checkout-session', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    customerEmail: email, 
+                    userId,
+                    priceId: priceId // Use the selected price or server will use default
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Checkout error:', errorData);
+                throw new Error(errorData.error || ERROR_MESSAGES.CHECKOUT_FAILED);
+            }
+    
+            const data = await response.json().catch(() => ({}));
+            if (!data.id) {
+                console.error('Invalid checkout response:', data);
+                throw new Error(data.error || ERROR_MESSAGES.INVALID_RESPONSE);
+            }
+            
+            return data.id;
+        } catch (error) {
+            console.error('Checkout session creation failed:', error);
+            throw new Error('Could not create checkout session: ' + (error.message || 'Unknown error'));
         }
-
-        const data = await response.json();
-        if (!data.id || !data.success) {
-            console.error('Invalid checkout response:', data);
-            throw new Error(data.error || ERROR_MESSAGES.INVALID_RESPONSE);
-        }
-
-        return data.id;
     }    
 
     document.getElementById('authForm').addEventListener('submit', async (event) => {
@@ -676,14 +678,16 @@
                 await initializeApp();
             }
 
-            if (isLoginMode) {
-                // LOGIN FLOW
+            if (isLoginMode) {                // LOGIN FLOW - Using safer maybeSingle to avoid errors with no rows
                 const { data: user, error: loginError } = await window.StartupStack.supabase
                     .from('users')
                     .select('*')
                     .eq('email', email)
-                    .single();                if (loginError) {
-                    console.error('Login error:', loginError);
+                    .maybeSingle();
+                
+                // If no user found or there was an error, redirect to signup
+                if (!user || loginError) {
+                    console.error('Login error or user not found:', loginError || 'No user with this email');
                     // Make sure modal is open before trying to switch tabs
                     if (document.getElementById('authModal') && 
                         !document.getElementById('authModal').classList.contains('hidden')) {
@@ -725,7 +729,7 @@
                 // Create checkout session with better error handling
                 try {
                     const sessionId = await createCheckoutSession(email, user.id);
-                    await stripe.redirectToCheckout({ sessionId });
+                    await window.stripe.redirectToCheckout({ sessionId });
                 } catch (checkoutError) {
                     console.error('Checkout error:', checkoutError);
                     throw new Error('Failed to start checkout process. Please try again.');
@@ -774,12 +778,23 @@
                     if (type !== 'success' || (!message.toLowerCase().includes('account') && !message.toLowerCase().includes('created'))) {
                         window.originalShowNotification(message, type);
                     }
-                };
-                  // Create checkout session for new user - directly proceed to checkout
-                try {
+                };                  // Create checkout session for new user - directly proceed to checkout
+                try {                    // Use the global stripe instance
+                    
+                    // Get the priceId from localStorage if it exists
+                    const priceId = localStorage.getItem('selectedPriceId');
+                    
                     const sessionId = await createCheckoutSession(email, newUser.id);
+                    if (!sessionId) {
+                        throw new Error('Invalid checkout session');
+                    }
+                    
                     // Immediately redirect to checkout
-                    await stripe.redirectToCheckout({ sessionId });
+                    const result = await window.stripe.redirectToCheckout({ sessionId });
+                    
+                    if (result.error) {
+                        throw new Error(result.error.message);
+                    }
                 } catch (checkoutError) {
                     // Restore original notification function
                     if (window.originalShowNotification) {
@@ -787,17 +802,32 @@
                         window.originalShowNotification = null;
                     }
                     console.error('Checkout error:', checkoutError);
-                    throw new Error('Failed to start checkout process. Please try again.');
+                    showNotification('Unable to start checkout. Please try again later.', 'error');
+                    
+                    // Don't throw the error here, just return to prevent further errors
+                    return;
                 }
-            }
-        } catch (error) {
+            }        } catch (error) {
             console.error('Auth error:', error);
             // Restore original notification function if it was overridden
             if (window.originalShowNotification) {
                 window.showNotification = window.originalShowNotification;
                 window.originalShowNotification = null;
             }
-            showNotification(error.message || 'Authentication failed', 'error');
+            
+            // Handle errors with clear user feedback
+            let errorMessage = 'Authentication failed';
+            if (error.message) {
+                if (error.message.includes('checkout')) {
+                    errorMessage = 'We had trouble setting up checkout. Please try again.';
+                } else if (error.message.includes('create account')) {
+                    errorMessage = 'We couldn\'t create your account. Please try again.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            showNotification(errorMessage, 'error');
         } finally {
             submitButton.disabled = false;
             submitButton.innerHTML = isLoginMode ? 'Log In' : 'Create Account';
