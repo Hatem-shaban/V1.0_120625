@@ -54,7 +54,8 @@
                 }
                 localStorage.setItem('selectedPriceId', priceId);
 
-                openAuthModal();
+                // Always open in signup mode for checkout
+                openAuthModal('signup');
 
             } catch (error) {
                 console.error('Checkout error:', error);
@@ -200,11 +201,12 @@
 </head>
 <body class="bg-gray-900 text-white">
     <!-- Hero Section -->
-    <div class="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-        <nav class="p-6">
+    <div class="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">        <nav class="p-6">
             <div class="max-w-6xl mx-auto flex justify-between items-center">
-                <h1 class="text-2xl font-bold">StartupStack</h1>
-                <button onclick="scrollToPrice()" class="bg-purple-600 px-6 py-2 rounded-lg hover:bg-purple-700">Get Started</button>
+                <h1 class="text-2xl font-bold">StartupStack</h1>                <div class="flex items-center space-x-4">
+                    <button onclick="openAuthModal('login')" class="text-white px-6 py-2 rounded-lg hover:text-purple-300 transition duration-200">Login</button>
+                    <button onclick="scrollToPrice()" class="bg-purple-600 px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200">Sign Up</button>
+                </div>
             </div>
         </nav>
         
@@ -222,9 +224,8 @@
                 <div><i class="fas fa-rocket"></i> 200+ Startups Launched</div>
                 <div><i class="fas fa-star"></i> 4.9/5 Rating</div>
             </div>
-            
-            <button onclick="scrollToPrice()" class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-lg text-xl font-semibold hover:scale-105 transform transition">
-                Start Your Startup Journey - $79/month
+              <button onclick="scrollToPrice()" class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-lg text-xl font-semibold hover:scale-105 transform transition">
+                Sign Up & Start Your Startup Journey
             </button>
         </div>
     </div>
@@ -393,10 +394,9 @@
                 class="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition duration-200">
                 Log In
             </button>
-            
-            <div id="authHelperText" class="mt-3 text-center text-sm text-gray-400">
-                <span id="loginHelper">New user? <a href="#" onclick="switchTab('signup'); return false;" class="text-purple-400 hover:underline">Create an account</a></span>
-                <span id="signupHelper" class="hidden">Already have an account? <a href="#" onclick="switchTab('login'); return false;" class="text-purple-400 hover:underline">Log in</a></span>
+              <div id="authHelperText" class="mt-3 text-center text-sm text-gray-400">
+                <span id="loginHelper">New user? <a href="#" onclick="switchTab('signup'); return false;" class="text-purple-400 hover:underline">Create an account</a> to get started</span>
+                <span id="signupHelper" class="hidden">Already have an account? <a href="#" onclick="switchTab('login'); return false;" class="text-purple-400 hover:underline">Log in</a> instead</span>
             </div>
             
             <p class="text-center text-sm text-gray-400 mt-4">
@@ -434,7 +434,8 @@
                 }
                 localStorage.setItem('selectedPriceId', priceId);
 
-                openAuthModal();
+                // Always open in signup mode for checkout
+                openAuthModal('signup');
 
             } catch (error) {
                 console.error('Checkout error:', error);
@@ -550,20 +551,11 @@
 
     // Show auth modal immediately if auth is required
     document.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('auth') || urlParams.has('subscription')) {
-            openAuthModal();
-            
-            // If coming from signup parameter, switch to signup tab
-            if (urlParams.has('auth') && urlParams.get('auth') === 'signup') {
-                switchTab('signup');
-            }
-        }
-    });
-
-    function openAuthModal() {
-        document.getElementById('authModal').classList.remove('hidden');
-    }
+        const urlParams = new URLSearchParams(window.location.search);        if (urlParams.has('auth') || urlParams.has('subscription')) {
+            // Determine which mode to open based on URL parameters
+            const mode = urlParams.has('auth') && urlParams.get('auth') === 'signup' ? 'signup' : 'login';
+            openAuthModal(mode);
+        }    });    // openAuthModal function is defined below with mode parameter
 
     function closeAuthModal() {
         document.getElementById('authModal').classList.add('hidden');
@@ -593,11 +585,12 @@
         // If switching to signup, make name required
         const nameInput = document.getElementById('userName');
         nameInput.required = !isLoginMode;
-    }    // Using the globally defined showNotification function
-    const showNotification = window.showNotification;function openAuthModal() {
+    }    // Using the globally defined showNotification function    const showNotification = window.showNotification;
+    
+    function openAuthModal(mode = 'login') {
         document.getElementById('authModal').classList.remove('hidden');
-        // Reset to login mode by default when opening modal
-        switchTab('login');
+        // Set mode explicitly based on parameter
+        switchTab(mode);
     }
 
     function closeAuthModal() {
