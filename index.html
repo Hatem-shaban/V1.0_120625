@@ -523,11 +523,15 @@
                     notification.remove();
                 }, 300);
             }, 3000);
-        };    </script>    <script>
+        };
+    </script>
+    
+    <script>
     // Define these variables and functions in the global scope so they're accessible everywhere
     let isLoginMode = true;
     
-    // Simplified tab switching function that only shows one tab at a time    window.switchTab = function(mode) {
+    // Simplified tab switching function that only shows one tab at a time
+    window.switchTab = function(mode) {
         isLoginMode = mode === 'login';
         
         // Check if auth modal elements exist before attempting to manipulate them
@@ -569,8 +573,9 @@
                 submitBtn.classList.add('bg-green-600', 'hover:bg-green-700', 'hover:shadow-green-500/30');
             }
         }
-    }
-      // Define openAuthModal function in the global scope
+    };
+    
+    // Define openAuthModal function in the global scope
     window.openAuthModal = function(mode = 'login') {
         const authModal = document.getElementById('authModal');
         if (authModal) {
@@ -578,9 +583,8 @@
             // Set mode explicitly based on parameter
             window.switchTab(mode);
         }
-    }
-    
-    // Define closeAuthModal in the global scope
+    };
+      // Define closeAuthModal in the global scope
     window.closeAuthModal = function() {
         const authModal = document.getElementById('authModal');
         const emailField = document.getElementById('email');
@@ -593,7 +597,7 @@
         // Clear form fields if they exist
         if (emailField) emailField.value = '';
         if (userNameField) userNameField.value = '';
-    }
+    };
     
     // Show auth modal immediately if auth is required
     document.addEventListener('DOMContentLoaded', () => {
@@ -604,8 +608,7 @@
             window.openAuthModal(mode);
         }
     });
-    
-    // Using the globally defined showNotification function
+      // Use the globally defined showNotification function
     const showNotification = window.showNotification;
     </script>
 
