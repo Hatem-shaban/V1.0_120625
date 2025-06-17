@@ -69,24 +69,23 @@ exports.handler = async (event, context) => {
             }],
             success_url: `${process.env.URL}/success.html?session_id={CHECKOUT_SESSION_ID}&userId=${userId}`,
             cancel_url: `${process.env.URL}?checkout=cancelled`,
-            customer_email: customerEmail,
-            metadata: {
+            customer_email: customerEmail,            metadata: {
                 userId: userId,
-                priceId: priceId || process.env.STRIPE_PRICE_ID
+                priceId: priceId || process.env.STRIPE_PRICE_ID,
+                planType: planType // Store plan type in metadata for success page to use
             }
         });        // Update user status with retry logic
         let retryCount = 0;
         const maxRetries = 3;
         let updateError;
 
-        while (retryCount < maxRetries) {
-            const { error } = await supabase
+        while (retryCount < maxRetries) {            const { error } = await supabase
                 .from('users')
                 .update({                    subscription_status: isLifetimePlan ? 'pending_lifetime' : 'pending_activation',
                     stripe_session_id: session.id,
-                    selected_plan: priceId || process.env.STRIPE_PRICE_ID,
+                    // Remove selected_plan as it doesn't exist in the database
                     updated_at: new Date().toISOString(),
-                    plan_type: planType // Use the variable we defined above
+                    plan_type: planType // Set plan_type directly based on priceId
                 })
                 .eq('id', userId);
 

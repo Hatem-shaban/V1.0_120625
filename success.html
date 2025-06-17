@@ -22,25 +22,25 @@
                 }
 
                 statusDiv.innerHTML = 'Initializing...';
-                const stack = await startupStackPromise;
-
-                statusDiv.innerHTML = 'Updating subscription status...';
-                // Update subscription status with explicit return                // First get the user data to preserve the plan_type
+                const stack = await startupStackPromise;                statusDiv.innerHTML = 'Updating subscription status...';
+                
+                // Get current subscription info from user data
                 const { data: userData, error: fetchError } = await stack.supabase
                     .from('users')
-                    .select('plan_type, selected_plan')
+                    .select('plan_type, stripe_session_id')
                     .eq('id', userId)
                     .single();
                 
                 if (fetchError) throw fetchError;
-
-                // Update user with preserved plan_type
+                
+                // Use the previously set plan_type, don't try to determine it here
+                // This ensures we honor what was set during checkout
                 const { data, error } = await stack.supabase
                     .from('users')
                     .update({ 
                         subscription_status: 'active',
-                        updated_at: new Date().toISOString(),
-                        plan_type: userData.plan_type || (userData.selected_plan === 'price_1RYhFGE92IbV5FBUqiKOcIqX' ? 'lifetime' : 'subscription')
+                        updated_at: new Date().toISOString()
+                        // No plan_type update here - using the one set during checkout
                     })
                     .eq('id', userId)
                     .select()
