@@ -527,47 +527,72 @@
     // Define these variables and functions in the global scope so they're accessible everywhere
     let isLoginMode = true;
     
-    // Simplified tab switching function that only shows one tab at a time
-    window.switchTab = function(mode) {
+    // Simplified tab switching function that only shows one tab at a time    window.switchTab = function(mode) {
         isLoginMode = mode === 'login';
         
+        // Check if auth modal elements exist before attempting to manipulate them
+        const loginTab = document.getElementById('loginTab');
+        const signupTab = document.getElementById('signupTab');
+        const authTitle = document.getElementById('authTitle');
+        const loginBtnText = document.getElementById('loginBtnText');
+        const nameField = document.getElementById('nameField');
+        const loginHelper = document.getElementById('loginHelper');
+        const signupHelper = document.getElementById('signupHelper');
+        const submitBtn = document.getElementById('authSubmitBtn');
+        
+        // Exit if required elements don't exist
+        if (!loginTab || !signupTab) {
+            console.warn('Auth modal elements not found - modal may not be open');
+            return;
+        }
+        
         // Show only the active tab, hide the inactive one
-        document.getElementById('loginTab').style.display = isLoginMode ? 'block' : 'none';
-        document.getElementById('signupTab').style.display = !isLoginMode ? 'block' : 'none';
+        loginTab.style.display = isLoginMode ? 'block' : 'none';
+        signupTab.style.display = !isLoginMode ? 'block' : 'none';
         
         // Update form elements
-        document.getElementById('authTitle').textContent = isLoginMode ? 'Log In' : 'Sign Up';
-        document.getElementById('loginBtnText').textContent = isLoginMode ? 'Log In' : 'Create Account';
-        document.getElementById('nameField').style.display = isLoginMode ? 'none' : 'block';
+        if (authTitle) authTitle.textContent = isLoginMode ? 'Log In' : 'Sign Up';
+        if (loginBtnText) loginBtnText.textContent = isLoginMode ? 'Log In' : 'Create Account';
+        if (nameField) nameField.style.display = isLoginMode ? 'none' : 'block';
         
         // Update helper text visibility
-        document.getElementById('loginHelper').style.display = isLoginMode ? 'inline' : 'none';
-        document.getElementById('signupHelper').style.display = !isLoginMode ? 'inline' : 'none';
+        if (loginHelper) loginHelper.style.display = isLoginMode ? 'inline' : 'none';
+        if (signupHelper) signupHelper.style.display = !isLoginMode ? 'inline' : 'none';
         
         // Update button styling based on mode
-        const submitBtn = document.getElementById('authSubmitBtn');
-        if (isLoginMode) {
-            submitBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'hover:shadow-green-500/30');
-            submitBtn.classList.add('bg-purple-600', 'hover:bg-purple-700', 'hover:shadow-purple-500/30');
-        } else {
-            submitBtn.classList.remove('bg-purple-600', 'hover:bg-purple-700', 'hover:shadow-purple-500/30');
-            submitBtn.classList.add('bg-green-600', 'hover:bg-green-700', 'hover:shadow-green-500/30');
+        if (submitBtn) {
+            if (isLoginMode) {
+                submitBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'hover:shadow-green-500/30');
+                submitBtn.classList.add('bg-purple-600', 'hover:bg-purple-700', 'hover:shadow-purple-500/30');
+            } else {
+                submitBtn.classList.remove('bg-purple-600', 'hover:bg-purple-700', 'hover:shadow-purple-500/30');
+                submitBtn.classList.add('bg-green-600', 'hover:bg-green-700', 'hover:shadow-green-500/30');
+            }
         }
     }
-    
-    // Define openAuthModal function in the global scope
+      // Define openAuthModal function in the global scope
     window.openAuthModal = function(mode = 'login') {
-        document.getElementById('authModal').classList.remove('hidden');
-        // Set mode explicitly based on parameter
-        window.switchTab(mode);
+        const authModal = document.getElementById('authModal');
+        if (authModal) {
+            authModal.classList.remove('hidden');
+            // Set mode explicitly based on parameter
+            window.switchTab(mode);
+        }
     }
     
     // Define closeAuthModal in the global scope
     window.closeAuthModal = function() {
-        document.getElementById('authModal').classList.add('hidden');
-        // Clear form fields
-        document.getElementById('email').value = '';
-        document.getElementById('userName').value = '';
+        const authModal = document.getElementById('authModal');
+        const emailField = document.getElementById('email');
+        const userNameField = document.getElementById('userName');
+        
+        if (authModal) {
+            authModal.classList.add('hidden');
+        }
+        
+        // Clear form fields if they exist
+        if (emailField) emailField.value = '';
+        if (userNameField) userNameField.value = '';
     }
     
     // Show auth modal immediately if auth is required
@@ -656,9 +681,18 @@
                     .eq('email', email)
                     .single();                if (loginError) {
                     console.error('Login error:', loginError);
-                    // Suggest signing up instead
-                    window.switchTab('signup');
-                    showNotification('Email not found. Please sign up instead.', 'info');
+                    // Make sure modal is open before trying to switch tabs
+                    if (document.getElementById('authModal') && 
+                        !document.getElementById('authModal').classList.contains('hidden')) {
+                        window.switchTab('signup');
+                    } else {
+                        // If modal isn't open, open it first in signup mode
+                        window.openAuthModal('signup');
+                    }
+                    
+                    // Show notification with signup option
+                    const notificationMessage = 'Account not found. Please sign up to continue.';
+                    showNotification(notificationMessage, 'info');
                     return;
                 }
 
