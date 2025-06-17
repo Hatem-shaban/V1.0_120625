@@ -780,9 +780,7 @@
                     switchTab('login');
                     showNotification('Email already exists. Please log in instead.', 'info');
                     return;
-                }
-
-                // Create new user with name field
+                }                // Create new user with name field
                 const { data: newUser, error: createError } = await window.StartupStack.supabase
                     .from('users')
                     .insert([{
@@ -803,28 +801,40 @@
                         showNotification('Email already exists. Please log in instead.', 'info');
                         return;
                     }
-                    throw new Error('Failed to create account. Please try again.');
-                }
-                
-                // Show success message
-                showNotification('Account created successfully!', 'success');
-                
-                // Store user data in localStorage
+                    throw new Error('Failed to create account. Please try again.');                }                // Store user data in localStorage
                 localStorage.setItem('userId', newUser.id);
                 localStorage.setItem('userEmail', email);
                 localStorage.setItem('userName', userName);
-
-                // Create checkout session for new user
+                  // Temporarily override showNotification to prevent any success messages during signup
+                window.originalShowNotification = window.showNotification;
+                window.showNotification = function(message, type) {
+                    // Only show non-success notifications during signup flow
+                    if (type !== 'success' || (!message.toLowerCase().includes('account') && !message.toLowerCase().includes('created'))) {
+                        window.originalShowNotification(message, type);
+                    }
+                };
+                  // Create checkout session for new user - directly proceed to checkout
                 try {
                     const sessionId = await createCheckoutSession(email, newUser.id);
+                    // Immediately redirect to checkout
                     await stripe.redirectToCheckout({ sessionId });
                 } catch (checkoutError) {
+                    // Restore original notification function
+                    if (window.originalShowNotification) {
+                        window.showNotification = window.originalShowNotification;
+                        window.originalShowNotification = null;
+                    }
                     console.error('Checkout error:', checkoutError);
                     throw new Error('Failed to start checkout process. Please try again.');
                 }
             }
         } catch (error) {
             console.error('Auth error:', error);
+            // Restore original notification function if it was overridden
+            if (window.originalShowNotification) {
+                window.showNotification = window.originalShowNotification;
+                window.originalShowNotification = null;
+            }
             showNotification(error.message || 'Authentication failed', 'error');
         } finally {
             submitButton.disabled = false;
