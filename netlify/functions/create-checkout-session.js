@@ -54,10 +54,24 @@ exports.handler = async (event, context) => {
                 headers,
                 body: JSON.stringify({ error: 'User not found' })
             };
-        }        // Determine checkout mode based on the price ID
-        // Lifetime plan has a specific price ID
-        const isLifetimePlan = priceId === 'price_1RYhFGE92IbV5FBUqiKOcIqX';
-        const planType = isLifetimePlan ? 'lifetime' : 'subscription';
+        }        // Determine plan type based on the price ID
+        let planType;
+        switch(priceId) {
+            case 'price_1RYhFGE92IbV5FBUqiKOcIqX':
+                planType = 'lifetime';
+                break;
+            case 'price_1RYhAlE92IbV5FBUCtOmXIow':
+                planType = 'starter';
+                break;
+            case 'price_1RSdrmE92IbV5FBUV1zE2VhD':
+                planType = 'pro';
+                break;
+            default:
+                planType = 'subscription'; // Fallback
+        }
+        
+        // Determine if it's a lifetime plan for checkout mode purposes
+        const isLifetimePlan = planType === 'lifetime';
         
         // Create Stripe checkout session with specified price ID
         const session = await stripe.checkout.sessions.create({
