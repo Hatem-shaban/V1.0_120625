@@ -52,10 +52,8 @@
                 if (!priceId) {
                     throw new Error('Invalid price selected');
                 }
-                localStorage.setItem('selectedPriceId', priceId);
-
-                // Always open in signup mode for checkout
-                openAuthModal('signup');
+                localStorage.setItem('selectedPriceId', priceId);                // Always open in signup mode for checkout
+                window.openAuthModal('signup');
 
             } catch (error) {
                 console.error('Checkout error:', error);
@@ -204,7 +202,7 @@
     <div class="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">        <nav class="p-6">
             <div class="max-w-6xl mx-auto flex justify-between items-center">
                 <h1 class="text-2xl font-bold">StartupStack</h1>                <div class="flex items-center space-x-4">
-                    <button onclick="openAuthModal('login')" class="border border-purple-400 text-purple-200 px-6 py-2 rounded-lg hover:bg-purple-900 hover:border-purple-300 hover:text-white transition-all duration-300 flex items-center">
+                    <button onclick="window.openAuthModal('login')" class="border border-purple-400 text-purple-200 px-6 py-2 rounded-lg hover:bg-purple-900 hover:border-purple-300 hover:text-white transition-all duration-300 flex items-center">
                         <i class="fas fa-user mr-2"></i>Login
                     </button>
                     <button onclick="scrollToPrice()" class="bg-purple-600 px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200 shadow-lg hover:shadow-purple-500/30">Sign Up</button>
@@ -350,7 +348,7 @@
             <div class="mt-16 text-center">
                 <div class="inline-block bg-gray-800 px-8 py-6 rounded-lg shadow-lg border border-gray-700">
                     <p class="text-lg text-gray-300 mb-4">Already a member?</p>
-                    <button onclick="openAuthModal('login')" class="bg-transparent border-2 border-purple-400 text-purple-300 px-8 py-3 rounded-lg hover:bg-purple-900 hover:text-white transition-all duration-200 flex items-center mx-auto">
+                    <button onclick="window.openAuthModal('login')" class="bg-transparent border-2 border-purple-400 text-purple-300 px-8 py-3 rounded-lg hover:bg-purple-900 hover:text-white transition-all duration-200 flex items-center mx-auto">
                         <i class="fas fa-sign-in-alt mr-3"></i>
                         <span class="font-medium">Login to your account</span>
                     </button>
@@ -394,36 +392,7 @@
                 </h3>
             </div>
         </div>
-        
-        <script>
-        // Simplified tab switching function that only shows one tab at a time
-        function switchTab(mode) {
-            isLoginMode = mode === 'login';
-            
-            // Show only the active tab, hide the inactive one
-            document.getElementById('loginTab').style.display = isLoginMode ? 'block' : 'none';
-            document.getElementById('signupTab').style.display = !isLoginMode ? 'block' : 'none';
-            
-            // Update form elements
-            document.getElementById('authTitle').textContent = isLoginMode ? 'Log In' : 'Sign Up';
-            document.getElementById('loginBtnText').textContent = isLoginMode ? 'Log In' : 'Create Account';
-            document.getElementById('nameField').style.display = isLoginMode ? 'none' : 'block';
-            
-            // Update helper text visibility
-            document.getElementById('loginHelper').style.display = isLoginMode ? 'inline' : 'none';
-            document.getElementById('signupHelper').style.display = !isLoginMode ? 'inline' : 'none';
-            
-            // Update button styling based on mode
-            const submitBtn = document.getElementById('authSubmitBtn');
-            if (isLoginMode) {
-                submitBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'hover:shadow-green-500/30');
-                submitBtn.classList.add('bg-purple-600', 'hover:bg-purple-700', 'hover:shadow-purple-500/30');
-            } else {
-                submitBtn.classList.remove('bg-purple-600', 'hover:bg-purple-700', 'hover:shadow-purple-500/30');
-                submitBtn.classList.add('bg-green-600', 'hover:bg-green-700', 'hover:shadow-green-500/30');
-            }
-        }
-        </script>
+          <!-- Tab switching logic moved to global scope -->
 
         <!-- Auth Form -->
         <form id="authForm" class="space-y-4">
@@ -441,9 +410,8 @@
                 class="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition duration-300 shadow-lg hover:shadow-purple-500/30 font-medium flex items-center justify-center">
                 <i id="loginBtnIcon" class="fas fa-sign-in-alt mr-2"></i>
                 <span id="loginBtnText">Log In</span>
-            </button>              <div id="authHelperText" class="mt-3 text-center text-sm text-gray-400">
-                <span id="loginHelper">New user? <a href="#" onclick="switchTab('signup'); return false;" class="text-purple-400 hover:underline">Create an account</a> to get started</span>
-                <span id="signupHelper" style="display: none;">Already have an account? <a href="#" onclick="switchTab('login'); return false;" class="text-purple-400 hover:underline">Log in</a> instead</span>
+            </button>              <div id="authHelperText" class="mt-3 text-center text-sm text-gray-400">                <span id="loginHelper">New user? <a href="#" onclick="window.switchTab('signup'); return false;" class="text-purple-400 hover:underline">Create an account</a> to get started</span>
+                <span id="signupHelper" style="display: none;">Already have an account? <a href="#" onclick="window.switchTab('login'); return false;" class="text-purple-400 hover:underline">Log in</a> instead</span>
             </div>
             
             <p class="text-center text-sm text-gray-400 mt-4">
@@ -453,47 +421,10 @@
     </div>
 </div>
 
-    <script>
-        function scrollToPrice() {
+    <script>        function scrollToPrice() {
             document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
         }
-        
-        const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
-
-        async function startCheckout(event) {
-            event.preventDefault();
-            const currentButton = event.currentTarget;
-            const originalText = currentButton.innerHTML;
-            
-            try {
-                currentButton.disabled = true;
-                currentButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-
-                // Initialize StartupStack if needed
-                if (!window.StartupStack?.initialized) {
-                    await initializeApp();
-                }
-
-                // Store the selected price ID
-                const priceId = currentButton.dataset.priceId;
-                if (!priceId) {
-                    throw new Error('Invalid price selected');
-                }
-                localStorage.setItem('selectedPriceId', priceId);
-
-                // Always open in signup mode for checkout
-                openAuthModal('signup');
-
-            } catch (error) {
-                console.error('Checkout error:', error);
-                showNotification(error.message || 'Something went wrong', 'error');
-            } finally {
-                if (currentButton) {
-                    currentButton.disabled = false;
-                    currentButton.innerHTML = originalText;
-                }
-            }
-        }
+          const stripe = Stripe('pk_test_51Ps2dzE92IbV5FBUbYDh6nBs2WLVSofAVNDwp5emPBrLW1vdaRjZXVW2o6A9nYvPQDqy8k95sd8bQmF497HlHLUk00a07sJfdo');
     </script>    <script>
         // Email Functions with improved error handling
         async function sendWelcomeEmail(userEmail, userName = 'New User') {
@@ -592,30 +523,17 @@
                     notification.remove();
                 }, 300);
             }, 3000);
-        };
-    </script>    <script>
+        };    </script>    <script>
+    // Define these variables and functions in the global scope so they're accessible everywhere
     let isLoginMode = true;
-
-    // Show auth modal immediately if auth is required
-    document.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);        if (urlParams.has('auth') || urlParams.has('subscription')) {
-            // Determine which mode to open based on URL parameters
-            const mode = urlParams.has('auth') && urlParams.get('auth') === 'signup' ? 'signup' : 'login';
-            openAuthModal(mode);
-        }    });    // openAuthModal function is defined below with mode parameter    function closeAuthModal() {
-        document.getElementById('authModal').classList.add('hidden');
-    }
     
-    // switchTab function is now defined inline with the auth tabs
-        document.getElementById('signupTab').style.display = !isLoginMode ? 'flex' : 'none';
+    // Simplified tab switching function that only shows one tab at a time
+    window.switchTab = function(mode) {
+        isLoginMode = mode === 'login';
         
-        // Always style the visible tab as active
-        const activeStyle = 'flex-1 py-3 text-center font-medium text-white border-b-2 border-purple-500 transition duration-200 flex items-center justify-center';
-        if (isLoginMode) {
-            document.getElementById('loginTab').className = activeStyle;
-        } else {
-            document.getElementById('signupTab').className = activeStyle;
-        }
+        // Show only the active tab, hide the inactive one
+        document.getElementById('loginTab').style.display = isLoginMode ? 'block' : 'none';
+        document.getElementById('signupTab').style.display = !isLoginMode ? 'block' : 'none';
         
         // Update form elements
         document.getElementById('authTitle').textContent = isLoginMode ? 'Log In' : 'Sign Up';
@@ -635,21 +553,35 @@
             submitBtn.classList.remove('bg-purple-600', 'hover:bg-purple-700', 'hover:shadow-purple-500/30');
             submitBtn.classList.add('bg-green-600', 'hover:bg-green-700', 'hover:shadow-green-500/30');
         }
-    }    // Using the globally defined showNotification function    const showNotification = window.showNotification;
+    }
     
-    function openAuthModal(mode = 'login') {
+    // Define openAuthModal function in the global scope
+    window.openAuthModal = function(mode = 'login') {
         document.getElementById('authModal').classList.remove('hidden');
         // Set mode explicitly based on parameter
-        switchTab(mode);
+        window.switchTab(mode);
     }
-
-    function closeAuthModal() {
+    
+    // Define closeAuthModal in the global scope
+    window.closeAuthModal = function() {
         document.getElementById('authModal').classList.add('hidden');
         // Clear form fields
         document.getElementById('email').value = '';
         document.getElementById('userName').value = '';
-    }    // switchTab function is defined earlier in the document
     }
+    
+    // Show auth modal immediately if auth is required
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('auth') || urlParams.has('subscription')) {
+            // Determine which mode to open based on URL parameters
+            const mode = urlParams.has('auth') && urlParams.get('auth') === 'signup' ? 'signup' : 'login';
+            window.openAuthModal(mode);
+        }
+    });
+    
+    // Using the globally defined showNotification function
+    const showNotification = window.showNotification;
     </script>
 
     <script>
@@ -722,12 +654,10 @@
                     .from('users')
                     .select('*')
                     .eq('email', email)
-                    .single();
-
-                if (loginError) {
+                    .single();                if (loginError) {
                     console.error('Login error:', loginError);
                     // Suggest signing up instead
-                    switchTab('signup');
+                    window.switchTab('signup');
                     showNotification('Email not found. Please sign up instead.', 'info');
                     return;
                 }
@@ -771,14 +701,12 @@
                     .from('users')
                     .select('id, email')
                     .eq('email', email)
-                    .maybeSingle();
-
-                if (existingUser) {
+                    .maybeSingle();                if (existingUser) {
                     // Switch to login mode if user already exists
-                    switchTab('login');
+                    window.switchTab('login');
                     showNotification('Email already exists. Please log in instead.', 'info');
                     return;
-                }                // Create new user with name field
+                }// Create new user with name field
                 const { data: newUser, error: createError } = await window.StartupStack.supabase
                     .from('users')
                     .insert([{
@@ -790,16 +718,15 @@
                         last_login: new Date().toISOString()
                     }])
                     .select()
-                    .single();
-
-                if (createError) {
+                    .single();                if (createError) {
                     console.error('User creation error:', createError);
                     if (createError.code === '23505') {
-                        switchTab('login');
+                        window.switchTab('login');
                         showNotification('Email already exists. Please log in instead.', 'info');
                         return;
                     }
-                    throw new Error('Failed to create account. Please try again.');                }                // Store user data in localStorage
+                    throw new Error('Failed to create account. Please try again.');
+                }// Store user data in localStorage
                 localStorage.setItem('userId', newUser.id);
                 localStorage.setItem('userEmail', email);
                 localStorage.setItem('userName', userName);
