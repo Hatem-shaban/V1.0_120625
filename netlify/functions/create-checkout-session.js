@@ -55,7 +55,9 @@ exports.handler = async (event, context) => {
                 body: JSON.stringify({ error: 'User not found' })
             };
         }        // Determine checkout mode based on the price ID
+        // Lifetime plan has a specific price ID
         const isLifetimePlan = priceId === 'price_1RYhFGE92IbV5FBUqiKOcIqX';
+        const planType = isLifetimePlan ? 'lifetime' : 'subscription';
         
         // Create Stripe checkout session with specified price ID
         const session = await stripe.checkout.sessions.create({
@@ -80,12 +82,11 @@ exports.handler = async (event, context) => {
         while (retryCount < maxRetries) {
             const { error } = await supabase
                 .from('users')
-                .update({ 
-                    subscription_status: isLifetimePlan ? 'pending_lifetime' : 'pending_activation',
+                .update({                    subscription_status: isLifetimePlan ? 'pending_lifetime' : 'pending_activation',
                     stripe_session_id: session.id,
                     selected_plan: priceId || process.env.STRIPE_PRICE_ID,
                     updated_at: new Date().toISOString(),
-                    plan_type: isLifetimePlan ? 'lifetime' : 'subscription'
+                    plan_type: planType // Use the variable we defined above
                 })
                 .eq('id', userId);
 

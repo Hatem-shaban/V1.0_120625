@@ -25,12 +25,22 @@
                 const stack = await startupStackPromise;
 
                 statusDiv.innerHTML = 'Updating subscription status...';
-                // Update subscription status with explicit return
+                // Update subscription status with explicit return                // First get the user data to preserve the plan_type
+                const { data: userData, error: fetchError } = await stack.supabase
+                    .from('users')
+                    .select('plan_type, selected_plan')
+                    .eq('id', userId)
+                    .single();
+                
+                if (fetchError) throw fetchError;
+
+                // Update user with preserved plan_type
                 const { data, error } = await stack.supabase
                     .from('users')
                     .update({ 
                         subscription_status: 'active',
-                        updated_at: new Date().toISOString()
+                        updated_at: new Date().toISOString(),
+                        plan_type: userData.plan_type || (userData.selected_plan === 'price_1RYhFGE92IbV5FBUqiKOcIqX' ? 'lifetime' : 'subscription')
                     })
                     .eq('id', userId)
                     .select()
